@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Spaceship Game</title>
+<style>
+  /* Reset */
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: url('https://thumbs.dreamstime.com/b/sunrise-over-earth-stars-dark-space-ai-generated-sunrise-over-earth-299734292.jpg') no-repeat center center fixed;
+    background-size: cover;
+    user-select: none;
+  }
+
+  #container {
+    position: relative;
+    height: 100vh;
+    background: rgba(0,0,0,1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 3vw;
+    padding: 3vw;
+    flex-wrap: wrap;
+  }
+
+  /* ==== CHANGE HERE ==== */
+#gameWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  --canvas-width: 540px;  /* changehere */
+  --canvas-height: 700px; /* changehere */
+  flex-shrink: 0;
+}
+
+
+
+  h1 {
+    color: #7ff67f;
+    font-size: clamp(1.8rem, 2.5vw, 2.8rem);
+    text-shadow: 0 0 20px #38a836;
+    margin-bottom: 1rem;
+    user-select: none;
+    text-align: center;
+  }
+
+  #score, #bulletsLeft {
+    color: #bef7be;
+    font-weight: 700;
+    font-size: clamp(1.2rem, 1.5vw, 1.7rem);
+    margin: 6px 0;
+    text-shadow: 0 0 12px #4ade80cc;
+    user-select: none;
+  }
+  #bulletsLeft {
+    color: #f0e96a;
+    text-shadow: 0 0 12px #f0e96aaa;
+  }
+  #reloadInfo {
+    font-size: clamp(1rem, 1.3vw, 1.3rem);
+    color: #ffbd4a;
+    font-weight: 700;
+    height: 1.6em;
+    margin-bottom: 0.75rem;
+    user-select: none;
+  }
+
+ canvas {
+  background: #000000; /* fully black background inside game */
+  border-radius: 20px;
+  border: 3px solid #4ade80;
+  box-shadow: inset 0 0 28px #4ade80bb;
+  image-rendering: pixelated;
+  width: 100%;
+  max-width: var(--canvas-width);
+  height: auto;
+  max-height: var(--canvas-height);
+  display: block;
+  user-select: none;
+}
+
+  #deathScreen {
+    position: absolute;
+    top: 40px;
+    left: 20px;
+    right: 20px;
+    bottom: 40px;
+    background: rgba(15,15,15,0.97);
+    border-radius: 20px;
+    box-shadow: 0 0 48px #f54e4ecc;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #f54e4e;
+    font-size: clamp(2.5rem, 4vw, 3.5rem);
+    font-weight: 900;
+    text-align: center;
+    user-select: none;
+    z-index: 10;
+    padding: 40px;
+  }
+  #deathScreen p {
+    font-size: clamp(1.3rem, 2vw, 2rem);
+    margin-top: 20px;
+    color: #7ff67f;
+    font-weight: 700;
+    text-shadow: 0 0 18px #38a836;
+  }
+  #retryBtn {
+    margin-top: 40px;
+    padding: 14px 48px;
+    font-size: clamp(1.8rem, 3vw, 2.5rem);
+    background-color: #4ade80;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    color: #06370b;
+    font-weight: 700;
+    box-shadow: 0 0 36px #4ade80cc;
+    transition: background-color 0.3s ease;
+    user-select: none;
+  }
+  #retryBtn:hover {
+    background-color: #22bb22;
+  }
+
+  #instructions {
+    width: 320px;
+    max-width: 90vw;
+    color: #7ff67f;
+    font-size: clamp(1rem, 1.8vw, 1.2rem);
+    line-height: 1.5;
+    user-select: none;
+    border-radius: 20px;
+    padding: 30px 25px;
+    background: rgba(0, 0, 0, 0.55);
+    box-shadow: 0 0 36px #4ade80cc inset;
+    flex-shrink: 0;
+  }
+  #instructions h2 {
+    margin-bottom: 20px;
+    font-size: clamp(1.8rem, 3vw, 2.3rem);
+    text-align: center;
+    text-shadow: 0 0 18px #38a836;
+  }
+  #instructions ul {
+    padding-left: 20px;
+  }
+  #instructions li {
+    margin-bottom: 14px;
+  }
+
+  #playScreen {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(135deg, #000000ee, #0f0f0fdd);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #7ff67f;
+    font-family: 'Segoe UI Black', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    user-select: none;
+    padding: 40px 30px;
+    text-align: center;
+    z-index: 20;
+  }
+  #playScreen h1 {
+    font-size: clamp(3rem, 6vw, 4.5rem);
+    margin-bottom: 48px;
+    text-shadow: 0 0 28px #4ade80;
+  }
+  #playScreen p {
+    font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+    max-width: 600px;
+    margin-bottom: 32px;
+    line-height: 1.5;
+    color: #bff7bf;
+  }
+  #playScreen ul {
+    list-style: none;
+    padding-left: 0;
+    max-width: 560px;
+    font-size: clamp(1rem, 2vw, 1.3rem);
+    color: #bff7bf;
+    margin-bottom: 60px;
+    text-align: left;
+  }
+  #playScreen li {
+    margin-bottom: 14px;
+    padding-left: 28px;
+    position: relative;
+  }
+  #playScreen li::before {
+    content: "▶";
+    position: absolute;
+    left: 0;
+    color: #4ade80;
+    font-weight: 900;
+    font-size: 22px;
+    top: 2px;
+  }
+  #playButton {
+    background-color: #4ade80;
+    border: none;
+    color: #06370b;
+    font-size: clamp(2rem, 5vw, 3rem);
+    padding: 28px 96px;
+    border-radius: 24px;
+    cursor: pointer;
+    box-shadow: 0 0 36px #4ade80cc;
+    transition: background-color 0.3s ease;
+    font-weight: 900;
+  }
+  #playButton:hover {
+    background-color: #22bb22;
+  }
+
+  /* Responsive instructions on small screens */
+  @media (max-width: 850px) {
+    #container {
+      gap: 25px;
+      padding: 20px;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      overflow-y: auto;
+      height: 100vh;
+    }
+    #instructions {
+      width: 90vw;
+      max-width: none;
+      order: 2;
+    }
+    #gameWrapper {
+      order: 1;
+      width: 90vw;
+      max-width: var(--canvas-width);
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="container">
+  <div id="gameWrapper">
+    <h1>Spaceship Game</h1>
+    <div id="score">Score: 0</div>
+    <div id="bulletsLeft">Bullets Left: 10</div>
+    <div id="reloadInfo"></div>
+    <canvas id="gameCanvas" width="480" height="615"></canvas>
+
+    <div id="deathScreen">
+      GAME OVER
+      <p id="finalScore">Final Score: 0</p>
+      <button id="retryBtn">Retry</button>
+    </div>
+  </div>
+
+  <div id="instructions">
+    <h2>Instructions</h2>
+    <ul>
+      <li>Use ← and → arrow keys to move.</li>
+      <li>Press Spacebar to shoot bullets.</li>
+      <li>Collect blue crystals for +5 points.</li>
+      <li>Shoot red alien ships for +1 point.</li>
+      <li>You have 10 bullets before reload.</li>
+      <li>Avoid enemy collisions to survive.</li>
+    </ul>
+  </div>
+</div>
+
+<div id="playScreen">
+  <h1>Spaceship Game</h1>
+  <p>Welcome to the Spaceship Game!</p>
+  <p>Use arrow keys to move and spacebar to shoot.</p>
+  <ul>
+    <li>Collect blue crystals for +5 points.</li>
+    <li>Shoot red alien ships for +1 point each.</li>
+    <li>You have 10 bullets per reload cycle.</li>
+    <li>Avoid colliding with enemies.</li>
+  </ul>
+  <button id="playButton">Play</button>
+</div>
+
+<script>
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+
+  const scoreEl = document.getElementById('score');
+  const bulletsLeftEl = document.getElementById('bulletsLeft');
+  const reloadInfoEl = document.getElementById('reloadInfo');
+  const deathScreen = document.getElementById('deathScreen');
+  const finalScore = document.getElementById('finalScore');
+  const retryBtn = document.getElementById('retryBtn');
+  const playScreen = document.getElementById('playScreen');
+  const playButton = document.getElementById('playButton');
+  const container = document.getElementById('container');
+
+  const GAME_WIDTH = canvas.width;
+  const GAME_HEIGHT = canvas.height;
+
+  let score = 0;
+  let bulletsFired = 0;
+  const maxBullets = 10;
+  const reloadTime = 3;
+  let reloading = false;
+  let reloadTimer = 0;
+  let gameRunning = false;
+
+  const player = {
+    x: GAME_WIDTH / 2,
+    y: GAME_HEIGHT - 70,
+    width: 40,
+    height: 40,
+    speed: 7,
+    img: new Image(),
+  };
+
+  player.img.src = 'hero.jpg';
+
+  const enemyImg = new Image();
+  enemyImg.src = 'enemy.jpg';
+
+  const keys = {};
+  let bullets = [];
+  let enemies = [];
+  let coins = [];
+
+  let enemySpawnInterval = null;
+  const enemySpeed = 3;
+  const enemySpawnDelay = 1100;
+
+  window.addEventListener('keydown', e => {
+    if (e.code === 'ArrowLeft' || e.code === 'ArrowRight' || e.code === 'Space') e.preventDefault();
+    keys[e.code] = true;
+    if (e.code === 'Space') shootBullet();
+  });
+  window.addEventListener('keyup', e => {
+    keys[e.code] = false;
+  });
+
+  function shootBullet() {
+    if (!gameRunning || reloading) return;
+    if (bulletsFired < maxBullets) {
+      bullets.push({
+        x: player.x - 4,
+        y: player.y - 20,
+        width: 8,
+        height: 18,
+        speed: 12,
+      });
+      bulletsFired++;
+      updateBulletsLeft();
+      if (bulletsFired === maxBullets) startReloading();
+    }
+  }
+
+  function startReloading() {
+    reloading = true;
+    reloadTimer = reloadTime;
+    updateReloadInfo(reloadTimer);
+    const interval = setInterval(() => {
+      reloadTimer--;
+      updateReloadInfo(reloadTimer);
+      if (reloadTimer <= 0) {
+        clearInterval(interval);
+        reloading = false;
+        bulletsFired = 0;
+        updateReloadInfo();
+        updateBulletsLeft();
+      }
+    }, 1000);
+  }
+
+  function updateReloadInfo(timeLeft) {
+    reloadInfoEl.textContent = timeLeft ? `Reloading: ${timeLeft}s` : '';
+  }
+
+  function updateBulletsLeft() {
+    bulletsLeftEl.textContent = `Bullets Left: ${maxBullets - bulletsFired}`;
+  }
+
+  function updateScore(val) {
+    score += val;
+    scoreEl.textContent = `Score: ${score}`;
+  }
+
+  function drawPlayer() {
+    ctx.drawImage(player.img, player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
+  }
+
+  function drawBullet(b) {
+    ctx.fillStyle = '#68f2ff';
+    ctx.fillRect(b.x, b.y, b.width, b.height);
+  }
+
+  function drawEnemy(e) {
+    ctx.drawImage(enemyImg, e.x, e.y, e.width, e.height);
+  }
+
+  function drawCoin(c) {
+    // draw blue crystal as polygon or simple shape
+    ctx.save();
+    ctx.fillStyle = '#3b82f6'; // blue crystal color
+    ctx.shadowColor = '#60a5fa';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    const cx = c.x + c.width / 2;
+    const cy = c.y + c.height / 2;
+    const size = c.width / 2;
+    ctx.moveTo(cx, cy - size);
+    ctx.lineTo(cx + size * 0.6, cy);
+    ctx.lineTo(cx, cy + size);
+    ctx.lineTo(cx - size * 0.6, cy);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function update() {
+    if (keys.ArrowLeft) {
+      player.x -= player.speed;
+      if (player.x < player.width/2) player.x = player.width/2;
+    }
+    if (keys.ArrowRight) {
+      player.x += player.speed;
+      if (player.x > GAME_WIDTH - player.width/2) player.x = GAME_WIDTH - player.width/2;
+    }
+
+    bullets.forEach((b, i) => {
+      b.y -= b.speed;
+      if (b.y + b.height < 0) bullets.splice(i, 1);
+    });
+
+    enemies.forEach((e, i) => {
+      e.y += enemySpeed;
+      if (e.y > GAME_HEIGHT) enemies.splice(i, 1);
+    });
+
+    coins.forEach((c, i) => {
+      c.y += enemySpeed * 0.9;
+      if (c.y > GAME_HEIGHT) coins.splice(i, 1);
+    });
+
+    bullets.forEach((b, bi) => {
+      enemies.forEach((e, ei) => {
+        if (b.x < e.x + e.width && b.x + b.width > e.x && b.y < e.y + e.height && b.y + b.height > e.y) {
+          bullets.splice(bi, 1);
+          enemies.splice(ei, 1);
+          updateScore(1);
+        }
+      });
+    });
+
+    enemies.forEach(e => {
+      if (player.x - player.width / 2 < e.x + e.width && player.x + player.width / 2 > e.x && player.y - player.height/2 < e.y + e.height && player.y + player.height/2 > e.y) {
+        endGame();
+      }
+    });
+
+    coins.forEach((c, ci) => {
+      if (player.x - player.width / 2 < c.x + c.width && player.x + player.width / 2 > c.x && player.y - player.height/2 < c.y + c.height && player.y + player.height/2 > c.y) {
+        coins.splice(ci, 1);
+        updateScore(5);
+      }
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    drawPlayer();
+    bullets.forEach(drawBullet);
+    enemies.forEach(drawEnemy);
+    coins.forEach(drawCoin);
+  }
+
+  function gameLoop() {
+    if (!gameRunning) return;
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+  }
+
+  function startEnemySpawner() {
+    if (enemySpawnInterval) clearInterval(enemySpawnInterval);
+    enemySpawnInterval = setInterval(() => {
+      const enemyWidth = 40;
+      const enemyHeight = 30;
+      const x = Math.random() * (GAME_WIDTH - enemyWidth);
+      enemies.push({ x, y: -enemyHeight, width: enemyWidth, height: enemyHeight });
+
+      if (Math.random() < 0.5) {
+        const coinWidth = 28;
+        const coinHeight = 28;
+        const cx = Math.random() * (GAME_WIDTH - coinWidth);
+        coins.push({ x: cx, y: -coinHeight, width: coinWidth, height: coinHeight });
+      }
+    }, enemySpawnDelay);
+  }
+
+  function stopEnemySpawner() {
+    clearInterval(enemySpawnInterval);
+    enemySpawnInterval = null;
+  }
+
+  function startGame() {
+    bullets = [];
+    enemies = [];
+    coins = [];
+    score = 0;
+    bulletsFired = 0;
+    reloading = false;
+    updateScore(0);
+    updateReloadInfo();
+    updateBulletsLeft();
+    player.x = GAME_WIDTH / 2;
+    gameRunning = true;
+    deathScreen.style.display = 'none';
+    playScreen.style.display = 'none';
+    container.style.display = 'flex';
+    startEnemySpawner();
+    gameLoop();
+  }
+
+  function endGame() {
+    gameRunning = false;
+    stopEnemySpawner();
+    finalScore.textContent = `Final Score: ${score}`;
+    deathScreen.style.display = 'flex';
+  }
+
+  retryBtn.addEventListener('click', startGame);
+  playButton.addEventListener('click', startGame);
+</script>
+
+</body>
+</html>

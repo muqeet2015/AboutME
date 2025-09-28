@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <title>Fight For Life - Laser Dodge</title>
+  <style>
+    /* Reset & basics */
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at center, #0a0a14 0%, #05050a 90%);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: white;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+    }
+
+    /* Sidebar */
+    #sidebar {
+      width: 320px;
+      background: #111522ee;
+      padding: 25px 20px;
+      border-right: 3px solid #550000cc;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      box-shadow: inset 0 0 40px #550000cc;
+    }
+    #sidebar h1 {
+      margin: 0;
+      font-size: 28px;
+      text-align: center;
+      color: #ff4040;
+      text-shadow: 0 0 6px #ff4040aa;
+      user-select: none;
+    }
+    #sidebar p {
+      font-size: 16px;
+      line-height: 1.4;
+      user-select: none;
+    }
+
+    /* Game area */
+    #game {
+      flex: 1;
+      background: radial-gradient(circle at center, #050514, #000008);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    #box {
+      position: relative;
+      width: 640px;
+      height: 440px;
+      background: linear-gradient(135deg, #111416, #1a1c22);
+      border: 4px solid #ff4444;
+      border-radius: 12px;
+      box-shadow: 0 0 40px #ff444480 inset;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    #title {
+      position: absolute;
+      top: 8px;
+      width: 100%;
+      text-align: center;
+      font-size: 36px;
+      font-weight: 900;
+      color: #ff4444;
+      text-shadow:
+        0 0 10px #ff4444cc,
+        0 0 20px #ff4444cc;
+      pointer-events: none;
+      user-select: none;
+      z-index: 15;
+    }
+
+    /* Player */
+    #player {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #fff, #ff5555);
+      border-radius: 6px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow:
+        0 0 10px #ff6666cc,
+        0 0 30px #ff2222cc;
+      z-index: 10;
+      transition: box-shadow 0.2s ease;
+    }
+
+    /* Canvas for lasers and warnings */
+    #laserCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: 5;
+      border-radius: 12px;
+      width: 640px;
+      height: 440px;
+    }
+
+    /* Score display */
+    #score {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      font-size: 20px;
+      font-weight: 700;
+      color: #ff8888;
+      text-shadow:
+        0 0 8px #ff4444cc,
+        0 0 15px #ff2222cc;
+      user-select: none;
+      z-index: 20;
+      font-family: monospace;
+    }
+
+    /* Death screen */
+    #deathScreen {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: rgba(20, 0, 0, 0.9);
+      color: #ff5555;
+      font-size: 48px;
+      font-weight: 900;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      gap: 24px;
+      top: 0;
+      left: 0;
+      z-index: 50;
+      user-select: none;
+      display: none;
+      text-shadow:
+        0 0 12px #ff5555cc,
+        0 0 30px #ff0000cc;
+      font-family: monospace;
+    }
+
+    #deathScreen button {
+      font-size: 24px;
+      font-weight: 700;
+      background: #ff4444;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      color: white;
+      cursor: pointer;
+      box-shadow:
+        0 0 8px #ff4444cc,
+        0 0 20px #ff0000cc;
+      transition: background-color 0.3s ease;
+    }
+    #deathScreen button:hover {
+      background: #ff2222;
+    }
+  </style>
+</head>
+<body>
+  <div id="sidebar">
+    <h1>⚔️ Fight For Life</h1>
+    <p><strong>Controls:</strong> Use arrow keys or WASD to move your player square.</p>
+    <p>Dodge the incoming laser beams! White warning crosses and faint white lines show where lasers will shoot from and their angles.</p>
+    <p>The laser waves get faster and more intense as you survive longer. Can you last forever?</p>
+  </div>
+  <div id="game">
+    <div id="box">
+      <canvas id="laserCanvas" width="640" height="440"></canvas>
+      <div id="title">Fight For Life</div>
+      <div id="player"></div>
+      <div id="score">Score: 0</div>
+      <div id="deathScreen">
+        <div>You Died!</div>
+        <div id="finalScore" style="font-size:28px; margin-top:-10px;"></div>
+        <button id="restartBtn">Try Again</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const box = document.getElementById('box');
+      const player = document.getElementById('player');
+      const deathScreen = document.getElementById('deathScreen');
+      const restartBtn = document.getElementById('restartBtn');
+      const laserCanvas = document.getElementById('laserCanvas');
+      const ctx = laserCanvas.getContext('2d');
+      const scoreDisplay = document.getElementById('score');
+      const finalScoreDisplay = document.getElementById('finalScore');
+
+      const boxWidth = box.clientWidth;
+      const boxHeight = box.clientHeight;
+
+      const playerSize = 32;
+      const playerSpeed = 5;
+      const laserThickness = 12;
+      const warningThickness = 4;
+
+      let keys = {};
+      let isDead = false;
+
+      // Player position (top-left)
+      let playerX = boxWidth / 2 - playerSize / 2;
+      let playerY = boxHeight / 2 - playerSize / 2;
+
+      // Wave and laser control
+      let waveNumber = 1;
+      let baseLaserSpeed = 1200; // ms laser active duration
+      let laserSpeed = baseLaserSpeed;
+      let baseWarningDuration = 1500;
+      let warningDuration = baseWarningDuration;
+      let lasersPerWave = 4;
+      let waveInterval = null;
+
+      // Store lasers currently active or warning
+      // Each laser: { startX, startY, endX, endY, warningX, warningY, progress, state: 'warning'|'active', direction, duration, activeStart }
+      let lasers = [];
+
+      // Scoring
+      let score = 0;
+      let scoreStartTime = null;
+
+      // Utility: random float between min and max
+      function randRange(min, max) {
+        return Math.random() * (max - min) + min;
+      }
+
+      // Directions for lasers: up, down, left, right, plus diagonals
+      // Each direction: { name, startSide, dx, dy }
+      const directions = [
+        { name: 'left-to-right', startSide: 'left', dx: 1, dy: 0 },
+        { name: 'right-to-left', startSide: 'right', dx: -1, dy: 0 },
+        { name: 'top-to-bottom', startSide: 'top', dx: 0, dy: 1 },
+        { name: 'bottom-to-top', startSide: 'bottom', dx: 0, dy: -1 },
+        { name: 'topLeft-to-bottomRight', startSide: 'top-left', dx: 1, dy: 1 },
+        { name: 'topRight-to-bottomLeft', startSide: 'top-right', dx: -1, dy: 1 },
+        { name: 'bottomLeft-to-topRight', startSide: 'bottom-left', dx: 1, dy: -1 },
+        { name: 'bottomRight-to-topLeft', startSide: 'bottom-right', dx: -1, dy: -1 },
+      ];
+
+      // Convert startSide to position for laser start point
+      function getLaserPoints(direction) {
+        let startX, startY, endX, endY;
+
+        switch (direction.startSide) {
+          case 'left':
+            startX = 0;
+            startY = randRange(0, boxHeight);
+            endX = boxWidth;
+            endY = startY;
+            break;
+          case 'right':
+            startX = boxWidth;
+            startY = randRange(0, boxHeight);
+            endX = 0;
+            endY = startY;
+            break;
+          case 'top':
+            startX = randRange(0, boxWidth);
+            startY = 0;
+            endX = startX;
+            endY = boxHeight;
+            break;
+          case 'bottom':
+            startX = randRange(0, boxWidth);
+            startY = boxHeight;
+            endX = startX;
+            endY = 0;
+            break;
+          case 'top-left':
+            startX = 0;
+            startY = 0;
+            endX = boxWidth;
+            endY = boxHeight;
+            break;
+          case 'top-right':
+            startX = boxWidth;
+            startY = 0;
+            endX = 0;
+            endY = boxHeight;
+            break;
+          case 'bottom-left':
+            startX = 0;
+            startY = boxHeight;
+            endX = boxWidth;
+            endY = 0;
+            break;
+          case 'bottom-right':
+            startX = boxWidth;
+            startY = boxHeight;
+            endX = 0;
+            endY = 0;
+            break;
+          default:
+            startX = 0;
+            startY = 0;
+            endX = boxWidth;
+            endY = boxHeight;
+        }
+
+        return { startX, startY, endX, endY };
+      }
+
+      // Opposite side position for warning cross
+      function getWarningPos(laser) {
+        // The warning appears on the opposite side of laser shooting direction
+
+        // Vector from start to end
+        const vx = laser.endX - laser.startX;
+        const vy = laser.endY - laser.startY;
+
+        // Warning position is a bit offset opposite the laser start
+        const offset = 40;
+
+        // Normalize vector
+        const length = Math.sqrt(vx * vx + vy * vy);
+        const nx = vx / length;
+        const ny = vy / length;
+
+        // Position warning at the "end" + offset back to "start" side
+        // Warning is positioned at the laser's end point + offset backwards along laser vector
+        let warningX = laser.endX + (-nx * offset);
+        let warningY = laser.endY + (-ny * offset);
+
+        // Clamp inside box
+        warningX = Math.min(Math.max(warningX, 20), boxWidth - 20);
+        warningY = Math.min(Math.max(warningY, 20), boxHeight - 20);
+
+        return { warningX, warningY };
+      }
+
+      // Draw the warning cross flicker
+      function drawWarningCross(x, y, flicker) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.lineWidth = warningThickness;
+        ctx.strokeStyle = `rgba(255,255,255,${flicker})`;
+        ctx.shadowColor = `rgba(255,255,255,${flicker})`;
+        ctx.shadowBlur = 10;
+
+        const size = 20;
+        ctx.beginPath();
+        ctx.moveTo(-size / 2, -size / 2);
+        ctx.lineTo(size / 2, size / 2);
+        ctx.moveTo(-size / 2, size / 2);
+        ctx.lineTo(size / 2, -size / 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Draw the faint white angle line (warning laser line)
+      function drawWarningLine(laser) {
+        ctx.save();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+        ctx.shadowColor = 'rgba(255,255,255,0.25)';
+        ctx.shadowBlur = 4;
+        ctx.beginPath();
+        // Draw a line starting near the warning cross going opposite to laser firing direction
+
+        // Line length for visibility
+        const lineLength = 120;
+
+        // Vector from warning cross along laser direction (laser is from start to end)
+        const vx = laser.startX - laser.endX;
+        const vy = laser.startY - laser.endY;
+
+        // Normalize vector
+        const length = Math.sqrt(vx * vx + vy * vy);
+        const nx = vx / length;
+        const ny = vy / length;
+
+        // Start point is warning cross pos
+        const wx = laser.warningX;
+        const wy = laser.warningY;
+
+        // End point extends in laser firing direction
+        const ex = wx + nx * lineLength;
+        const ey = wy + ny * lineLength;
+
+        ctx.moveTo(wx, wy);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Draw laser beam (active phase)
+      function drawLaserBeam(x1, y1, x2, y2) {
+        ctx.save();
+        ctx.lineCap = 'round';
+
+        // Red glowing beam
+        const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+        grad.addColorStop(0, 'rgba(255, 60, 60, 0.8)');
+        grad.addColorStop(0.5, 'rgba(255, 180, 180, 0.6)');
+        grad.addColorStop(1, 'rgba(255, 60, 60, 0.8)');
+
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = laserThickness;
+        ctx.shadowColor = 'rgba(255, 70, 70, 0.8)';
+        ctx.shadowBlur = 18;
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Distance from point to line segment helper
+      function pointLineDistance(px, py, x1, y1, x2, y2) {
+        const A = px - x1;
+        const B = py - y1;
+        const C = x2 - x1;
+        const D = y2 - y1;
+
+        const dot = A * C + B * D;
+        const len_sq = C * C + D * D;
+        let param = -1;
+        if (len_sq !== 0) param = dot / len_sq;
+
+        let xx, yy;
+
+        if (param < 0) {
+          xx = x1;
+          yy = y1;
+        } else if (param > 1) {
+          xx = x2;
+          yy = y2;
+        } else {
+          xx = x1 + param * C;
+          yy = y1 + param * D;
+        }
+
+        const dx = px - xx;
+        const dy = py - yy;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+
+      // Spawn a wave of lasers
+      function spawnWave() {
+        // Increase difficulty gradually by score
+        waveNumber = Math.floor(score / 10) + 1;
+
+        lasersPerWave = Math.min(2 + waveNumber, 12);
+        laserSpeed = Math.max(baseLaserSpeed - waveNumber * 70, 400);
+        warningDuration = Math.max(baseWarningDuration - waveNumber * 50, 500);
+
+        lasers = [];
+
+        for (let i = 0; i < lasersPerWave; i++) {
+          const dir = directions[Math.floor(Math.random() * directions.length)];
+          const { startX, startY, endX, endY } = getLaserPoints(dir);
+          // Get warning position on opposite side
+          let laser = {
+            startX, startY, endX, endY,
+            state: 'warning',
+            progress: 0,
+            direction: dir,
+            duration: laserSpeed,
+            activeStart: 0,
+            warningX: 0,
+            warningY: 0,
+          };
+
+          const warningPos = getWarningPos(laser);
+          laser.warningX = warningPos.warningX;
+          laser.warningY = warningPos.warningY;
+
+          lasers.push(laser);
+        }
+      }
+
+      // Update player position based on keys
+      function updatePlayer() {
+        if (keys['ArrowUp'] || keys['w']) {
+          playerY -= playerSpeed;
+          if (playerY < 0) playerY = 0;
+        }
+        if (keys['ArrowDown'] || keys['s']) {
+          playerY += playerSpeed;
+          if (playerY > boxHeight - playerSize) playerY = boxHeight - playerSize;
+        }
+        if (keys['ArrowLeft'] || keys['a']) {
+          playerX -= playerSpeed;
+          if (playerX < 0) playerX = 0;
+        }
+        if (keys['ArrowRight'] || keys['d']) {
+          playerX += playerSpeed;
+          if (playerX > boxWidth - playerSize) playerX = boxWidth - playerSize;
+        }
+
+        player.style.left = `${playerX}px`;
+        player.style.top = `${playerY}px`;
+      }
+
+      // Game over logic
+      function gameOver() {
+        isDead = true;
+        deathScreen.style.display = 'flex';
+        finalScoreDisplay.textContent = `Final Score: ${score.toFixed(1)}`;
+        clearInterval(waveInterval);
+      }
+
+      // Reset game
+      function resetGame() {
+        isDead = false;
+        playerX = boxWidth / 2 - playerSize / 2;
+        playerY = boxHeight / 2 - playerSize / 2;
+        player.style.left = `${playerX}px`;
+        player.style.top = `${playerY}px`;
+        lasers = [];
+        score = 0;
+        scoreStartTime = performance.now();
+        deathScreen.style.display = 'none';
+        spawnWave();
+        if (waveInterval) clearInterval(waveInterval);
+        waveInterval = setInterval(() => {
+          if (!isDead) spawnWave();
+        }, 5000);
+        requestAnimationFrame(gameLoop);
+      }
+
+      // Main game loop
+      function gameLoop(timestamp=0) {
+        if (isDead) return;
+
+        updatePlayer();
+
+        // Update score based on survival time
+        if (!scoreStartTime) scoreStartTime = timestamp;
+        score = (timestamp - scoreStartTime) / 1000;
+        scoreDisplay.textContent = `Score: ${score.toFixed(1)}`;
+
+        ctx.clearRect(0, 0, boxWidth, boxHeight);
+
+        // Draw all lasers and warnings
+        for (let i = lasers.length - 1; i >= 0; i--) {
+          let laser = lasers[i];
+
+          if (laser.state === 'warning') {
+            laser.progress += 16 / warningDuration;
+            // Draw warning cross flicker
+            const flicker = 0.3 + 0.7 * Math.abs(Math.sin(performance.now() / 180));
+            drawWarningCross(laser.warningX, laser.warningY, flicker);
+
+            // Draw faint white line showing laser angle from warning position
+            drawWarningLine(laser);
+
+            if (laser.progress >= 1) {
+              laser.state = 'active';
+              laser.progress = 0;
+              laser.activeStart = performance.now();
+            }
+          } else if (laser.state === 'active') {
+            let elapsed = performance.now() - laser.activeStart;
+            laser.progress = elapsed / laser.duration;
+
+            if (laser.progress >= 1) {
+              lasers.splice(i, 1);
+              continue;
+            } else {
+              // Laser beam grows from start to end gradually
+              const curX = laser.startX + (laser.endX - laser.startX) * laser.progress;
+              const curY = laser.startY + (laser.endY - laser.startY) * laser.progress;
+
+              drawLaserBeam(laser.startX, laser.startY, curX, curY);
+
+              // Check collision with player (center)
+              const playerCenterX = playerX + playerSize / 2;
+              const playerCenterY = playerY + playerSize / 2;
+              const dist = pointLineDistance(playerCenterX, playerCenterY, laser.startX, laser.startY, curX, curY);
+              const threshold = laserThickness / 2 + playerSize / 2;
+
+              if (dist < threshold) {
+                gameOver();
+              }
+            }
+          }
+        }
+
+        requestAnimationFrame(gameLoop);
+      }
+
+      // Key handlers
+      window.addEventListener('keydown', e => {
+        keys[e.key] = true;
+      });
+      window.addEventListener('keyup', e => {
+        keys[e.key] = false;
+      });
+
+      // Restart button
+      restartBtn.onclick = resetGame;
+
+      // Initial start
+      resetGame();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Muqeet – The Gamer Genius</title>
+  <style>
+    /* Base styles */
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #6dd5fa, #2980b9);
+      color: #fff;
+      text-align: center;
+      overflow-x: hidden;
+      animation: fadeInBody 1.5s ease;
+      position: relative;
+      user-select: none;
+      height: 100vh;
+    }
+
+    @keyframes fadeInBody {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    header {
+      background-color: #2ecc71;
+      padding: 2rem 1rem;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      position: relative;
+      overflow: visible;
+    }
+
+    h1 {
+      font-size: 3rem;
+      margin: 0;
+      animation: slideDown 1s ease;
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.3s ease;
+    }
+
+    h1:hover {
+      color: #f9f871;
+      text-shadow: 0 0 15px #f9f871;
+    }
+
+    .tagline {
+      font-size: 1.3rem;
+      margin-top: 0.5rem;
+      font-style: italic;
+      color: #f9f871;
+      user-select: none;
+    }
+
+    section {
+      padding: 3rem 1rem;
+      max-width: 900px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    .box {
+      padding: 2rem;
+      margin-top: 2rem;
+      border-radius: 15px;
+      transition: transform 0.3s ease;
+      animation: scaleFade 1.2s ease;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      cursor: default;
+      user-select: none;
+      position: relative;
+    }
+
+    .box:hover {
+      transform: scale(1.07) rotate(1deg);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+    }
+
+    .gamer-box {
+      background-color: #000;
+      color: #00ff66;
+      border: 3px solid #00ff66;
+      animation: pulseGreen 3s infinite;
+    }
+
+    @keyframes pulseGreen {
+      0%, 100% { box-shadow: 0 0 8px #00ff66; }
+      50% { box-shadow: 0 0 20px #00ff66; }
+    }
+
+    .smart-box {
+      background-color: #27ae60;
+      color: #ffffff;
+      animation: slideInRight 1s ease;
+      border: 3px dashed #ffeaa7;
+      position: relative;
+    }
+
+    .study-box {
+      background-color: rgba(255, 255, 255, 0.15);
+      color: #f1f1f1;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      font-style: italic;
+    }
+
+    @keyframes scaleFade {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-40px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes slideInRight {
+      from { transform: translateX(100px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .smart-level {
+      font-size: 1.5rem;
+      color: #ffeaa7;
+      margin-top: 1rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-shadow: 1px 1px 3px #444;
+    }
+
+    button {
+      background: linear-gradient(145deg, #f39c12, #e67e22);
+      border: none;
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
+      color: #fff;
+      border-radius: 12px;
+      cursor: pointer;
+      margin-top: 2rem;
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      user-select: none;
+      outline-offset: 3px;
+      outline-color: transparent;
+    }
+
+    button:hover {
+      transform: scale(1.1) rotate(-5deg);
+      box-shadow: 0 10px 25px rgba(230, 126, 34, 0.8);
+      outline-color: #f39c12;
+    }
+
+    button::after {
+      content: "";
+      position: absolute;
+      width: 100%;
+      height: 0;
+      left: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.2);
+      transition: height 0.3s ease;
+      z-index: 0;
+      border-radius: 12px;
+    }
+
+    button:hover::after {
+      height: 100%;
+    }
+
+    button span {
+      position: relative;
+      z-index: 1;
+    }
+
+    #compliment {
+      margin-top: 1.5rem;
+      font-style: italic;
+      display: none;
+      font-size: 1.2rem;
+      background-color: #145a32;
+      color: #ffffff;
+      padding: 1rem;
+      border-radius: 10px;
+      animation: highlightFade 1s ease forwards;
+      box-shadow: 0 0 15px #0b4220;
+      user-select: none;
+    }
+
+    @keyframes highlightFade {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    footer {
+      margin-top: 4rem;
+      font-size: 0.9rem;
+      color: #eee;
+      user-select: none;
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Confetti canvas */
+    canvas#confetti-canvas {
+      position: fixed;
+      pointer-events: none;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 99998;
+    }
+
+    /* Secret Button styles */
+    .secret-button {
+      background: #9b59b6;
+      border: 2px dashed #fff;
+      color: #fff;
+      padding: 0.6rem 1.4rem;
+      font-weight: bold;
+      font-size: 1rem;
+      border-radius: 50px;
+      cursor: pointer;
+      position: fixed;
+      bottom: 25px;
+      right: 25px;
+      box-shadow: 0 0 15px #9b59b6;
+      user-select: none;
+      z-index: 9999;
+      transition: transform 0.3s ease, top 0.5s ease, left 0.5s ease;
+      touch-action: manipulation;
+    }
+
+    .secret-button:hover {
+      transform: scale(1.2) rotate(15deg);
+      box-shadow: 0 0 25px #8e44ad;
+    }
+
+    #secret-message {
+      display: none;
+      position: fixed;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #2c3e50cc;
+      color: #f39c12;
+      padding: 2rem 3rem;
+      border-radius: 25px;
+      font-size: 2rem;
+      font-weight: 900;
+      text-shadow: 0 0 10px #f39c12;
+      z-index: 99999;
+      user-select: none;
+      box-shadow: 0 0 30px #f39c12;
+      cursor: pointer;
+      animation: pulseGreen 2s infinite;
+      max-width: 90%;
+      text-align: center;
+    }
+
+    /* Game links section */
+    #games-section {
+      margin-top: 3rem;
+      padding: 2rem;
+      background: rgba(255,255,255,0.1);
+      border-radius: 20px;
+      border: 2px solid #f9f871;
+      box-shadow: 0 0 15px #f9f871;
+    }
+
+    #games-section h2 {
+      color: #ffeaa7;
+      font-weight: 900;
+      text-shadow: 1px 1px 5px #f39c12;
+      margin-bottom: 1rem;
+    }
+
+    .game-link {
+      display: inline-block;
+      margin: 0.8rem 1rem;
+      background: #2980b9;
+      padding: 1rem 1.8rem;
+      color: #fff;
+      border-radius: 15px;
+      text-decoration: none;
+      font-weight: 700;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+      transition: background 0.4s ease, transform 0.3s ease;
+      user-select: none;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .game-link:hover {
+      background: #3498db;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+      transform: scale(1.05);
+    }
+
+    .game-link::after {
+      content: "▶";
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.3rem;
+      transition: right 0.3s ease;
+    }
+
+    .game-link:hover::after {
+      right: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1 id="main-title" title="Click me for a surprise!">Meet Muqeet</h1>
+    <p class="tagline">A kid with a passion for gaming and a mind full of big ideas 🎮🧠</p>
+  </header>
+
+  <section>
+    <div class="box gamer-box">
+      <h2>🎮 Gamer Extraordinaire</h2>
+      <p>Muqeet loves video games! Whether it’s fast-paced action, strategy games, or creative adventures, he’s always ready to play and improve his skills.</p>
+      <p>Gaming isn't just fun—it helps build focus, problem-solving, and creativity. And Muqeet’s got plenty of all that!</p>
+    </div>
+
+    <div class="box smart-box">
+      <h2>🧠 Smart and Curious</h2>
+      <p>Muqeet is curious, thoughtful, and always learning something new. He's not afraid to ask big questions or try big challenges.</p>
+      <p class="smart-level">Smart Level: ⭐⭐⭐⭐⭐</p>
+      <button id="compliment-btn"><span>Click to learn something cool about Muqeet!</span></button>
+      <p id="compliment"></p>
+    </div>
+
+    <div class="box study-box">
+      <h2>📚 Excellent in Studies</h2>
+      <p>Not only is Muqeet an amazing gamer, he’s also great at school! He enjoys learning new things, solving problems, and doing his best in every subject.</p>
+      <p>From science to math to reading, Muqeet shines bright in the classroom too!</p>
+    </div>
+
+    <div id="games-section">
+      <h2>🚀 Muqeet's Game Zone</h2>
+      <a href="zombieshootv3.html" target="_blank" class="game-link" title="Zombie Shooter Game">Zombie Shooter</a>
+      <a href="SGGAME2.html" target="_blank" class="game-link" title="Space Shooter Game">Space Shooter</a>
+      <a href="lanechange.html" target="_blank" class="game-link" title="Car Pothole Dash Game">Car Pothole Dash</a>
+      <a href="LASER.DODGE.html" target="_blank" class="game-link" title="Dash or Die Game">Dash or Die</a>
+    </div>
+  </section>
+
+  <footer>
+    &copy; 2025 Muqeet's World. Keep learning, keep playing!
+  </footer>
+
+  <!-- Secret button for the Easter egg -->
+  <button id="secret-btn" class="secret-button" title="Click me for a secret!">Secret Button</button>
+
+  <!-- Secret message container -->
+  <div id="secret-message" title="Click to close me!">🎉 YOU FOUND THE SECRET! 🎉<br>Muqeet is AWESOME!</div>
+
+  <!-- Confetti canvas -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <script>
+    // Compliments list
+    const compliments = [
+      "Muqeet is great at solving tricky puzzles!",
+      "Muqeet never gives up. That’s what makes him awesome.",
+      "Creativity? Muqeet’s got that in spades!",
+      "Muqeet always helps friends learn new things.",
+      "Every day Muqeet gets better and smarter!",
+      "Muqeet’s kindness makes everyone smile."
+    ];
+
+    const complimentBtn = document.getElementById('compliment-btn');
+    const complimentText = document.getElementById('compliment');
+
+    complimentBtn.addEventListener('click', () => {
+      const randomCompliment = compliments[Math.floor(Math.random() * compliments.length)];
+      complimentText.textContent = randomCompliment;
+      complimentText.style.display = 'block';
+      complimentText.style.animation = 'highlightFade 0.8s ease forwards';
+    });
+
+    // Secret button and message handling
+    const secretBtn = document.getElementById('secret-btn');
+    const secretMsg = document.getElementById('secret-message');
+    const confettiCanvas = document.getElementById('confetti-canvas');
+    const confettiCtx = confettiCanvas.getContext('2d');
+
+    // Set canvas full screen
+    function resizeCanvas() {
+      confettiCanvas.width = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Confetti particle system
+    class ConfettiParticle {
+      constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.size = Math.random() * 7 + 5;
+        this.speedX = (Math.random() - 0.5) * 6;
+        this.speedY = Math.random() * -10 - 5;
+        this.gravity = 0.3;
+        this.opacity = 1;
+        this.damping = 0.98;
+        this.tilt = Math.random() * 360;
+        this.tiltSpeed = (Math.random() - 0.5) * 0.3;
+      }
+
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        this.speedY += this.gravity;
+        this.speedX *= this.damping;
+        this.opacity -= 0.015;
+        this.tilt += this.tiltSpeed;
+      }
+
+      draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.tilt);
+        ctx.fillStyle = `rgba(${this.color},${this.opacity.toFixed(2)})`;
+        ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+        ctx.restore();
+      }
+    }
+
+    // Generate colors for confetti
+    const confettiColors = [
+      '255, 0, 0',    // Red
+      '0, 255, 0',    // Green
+      '0, 0, 255',    // Blue
+      '255, 255, 0',  // Yellow
+      '255, 0, 255',  // Magenta
+      '0, 255, 255',  // Cyan
+      '255, 165, 0'   // Orange
+    ];
+
+    let confettiParticles = [];
+    let confettiAnimationId = null;
+
+    function launchConfetti() {
+      const count = 150;
+      confettiParticles = [];
+
+      for (let i = 0; i < count; i++) {
+        const x = Math.random() * confettiCanvas.width;
+        const y = confettiCanvas.height + 20;
+        const color = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+        confettiParticles.push(new ConfettiParticle(x, y, color));
+      }
+
+      if (!confettiAnimationId) {
+        animateConfetti();
+      }
+    }
+
+    function animateConfetti() {
+      confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+
+      confettiParticles.forEach((particle, index) => {
+        particle.update();
+        particle.draw(confettiCtx);
+
+        // Remove particle if fully faded or out of screen
+        if (particle.opacity <= 0 || particle.y > confettiCanvas.height + 30) {
+          confettiParticles.splice(index, 1);
+        }
+      });
+
+      if (confettiParticles.length > 0) {
+        confettiAnimationId = requestAnimationFrame(animateConfetti);
+      } else {
+        confettiAnimationId = null;
+      }
+    }
+
+    // Secret message toggle
+    secretMsg.addEventListener('click', () => {
+      secretMsg.style.display = 'none';
+    });
+
+    // For secret button behavior:
+    // 1. Before first click: the button dodges mouse pointer (moves away) but can be clicked.
+    // 2. On first click: normal behavior from now on (click to show secret + confetti).
+    // We'll implement dodge on mousemove near the button BEFORE first click.
+
+    let secretClicked = false;
+
+    secretBtn.addEventListener('click', () => {
+      showSecretMessage();
+      secretClicked = true;
+    });
+
+    // Function to show secret message and launch confetti
+    function showSecretMessage() {
+      secretMsg.style.display = 'block';
+      launchConfetti();
+    }
+
+    // Dodge behavior before first click
+    document.addEventListener('mousemove', (e) => {
+      if (secretClicked) return; // no dodge after first click
+
+      const btnRect = secretBtn.getBoundingClientRect();
+      const mouseX = e.clientX;
+      const mouseY = e.clientY;
+
+      // Calculate distance from mouse to button center
+      const btnCenterX = btnRect.left + btnRect.width / 2;
+      const btnCenterY = btnRect.top + btnRect.height / 2;
+
+      const distX = mouseX - btnCenterX;
+      const distY = mouseY - btnCenterY;
+      const distance = Math.sqrt(distX * distX + distY * distY);
+
+      const dodgeRadius = 120; // pixels
+
+      if (distance < dodgeRadius) {
+        // Calculate direction to move button away from mouse
+        const angle = Math.atan2(distY, distX);
+        // Move button in opposite direction with some offset, clamp inside viewport
+
+        const offset = dodgeRadius - distance + 30;
+
+        let newLeft = btnRect.left - Math.cos(angle) * offset;
+        let newTop = btnRect.top - Math.sin(angle) * offset;
+
+        // Clamp within viewport
+        const minLeft = 10;
+        const minTop = 10;
+        const maxLeft = window.innerWidth - btnRect.width - 10;
+        const maxTop = window.innerHeight - btnRect.height - 10;
+
+        newLeft = Math.min(maxLeft, Math.max(minLeft, newLeft));
+        newTop = Math.min(maxTop, Math.max(minTop, newTop));
+
+        secretBtn.style.position = 'fixed';
+        secretBtn.style.left = `${newLeft}px`;
+        secretBtn.style.top = `${newTop}px`;
+        secretBtn.style.right = 'auto';
+        secretBtn.style.bottom = 'auto';
+      }
+    });
+
+    // Bonus: Clicking the main title triggers a welcome confetti
+    const mainTitle = document.getElementById('main-title');
+    mainTitle.addEventListener('click', () => {
+      showSecretMessage();
+    });
+  </script>
+</body>
+</html>

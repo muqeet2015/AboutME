@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lane Dodger Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #111;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+      user-select: none;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #game-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background: #333;
+      background-image:
+        repeating-linear-gradient(
+          0deg,
+          #444,
+          #444 4px,
+          #3a3a3a 4px,
+          #3a3a3a 8px
+        );
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+
+    /* Screens */
+    .screen {
+      position: absolute;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(17,17,17,0.95);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-weight: 600;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+      user-select: none;
+      z-index: 10;
+      transition: opacity 0.5s ease;
+    }
+    .screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #start-screen h1 {
+      font-size: 48px;
+      margin-bottom: 12px;
+      color: #0ff;
+      text-shadow: 0 0 8px #0ff;
+    }
+    #start-screen p {
+      font-size: 20px;
+      max-width: 400px;
+      margin-bottom: 30px;
+      line-height: 1.4;
+      color: #ccc;
+    }
+    #start-screen small {
+      font-size: 14px;
+      color: #666;
+      margin-top: 10px;
+    }
+
+    #game-over-screen h2 {
+      font-size: 38px;
+      margin-bottom: 10px;
+      color: #ff5555;
+      text-shadow: 0 0 12px #ff4444;
+    }
+    #game-over-screen p {
+      font-size: 22px;
+      margin-bottom: 20px;
+      color: #fff;
+    }
+    #game-over-screen button {
+      padding: 12px 30px;
+      font-size: 18px;
+      border: none;
+      border-radius: 25px;
+      background: #ff4444;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 0 15px #ff6666;
+      transition: background-color 0.3s ease;
+    }
+    #game-over-screen button:hover {
+      background-color: #ff2222;
+    }
+
+    /* Actual Game Screen */
+    #game {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      z-index: 1;
+      display: none;
+    }
+
+    /* Lane lines */
+    .lane-line {
+      position: absolute;
+      top: 0;
+      width: 6px;
+      height: 100%;
+      background: repeating-linear-gradient(
+        to bottom,
+        white 0,
+        white 20px,
+        transparent 20px,
+        transparent 40px
+      );
+      opacity: 0.8;
+      z-index: 0;
+      pointer-events: none;
+      border-radius: 3px;
+    }
+
+    /* Player car */
+    #player {
+      position: absolute;
+      bottom: 10%;
+      width: 60px;
+      height: 100px;
+      z-index: 2;
+      cursor: pointer;
+      transition: left 0.15s ease;
+    }
+
+    #player .car-body {
+      position: relative;
+      width: 60px;
+      height: 100px;
+      background: linear-gradient(135deg, #0077ff, #004d99);
+      border-radius: 15px 15px 25px 25px;
+      box-shadow:
+        0 5px 10px rgba(0, 119, 255, 0.6),
+        inset 0 2px 5px rgba(255,255,255,0.3);
+    }
+    #player .car-window {
+      position: absolute;
+      top: 15px;
+      left: 8px;
+      width: 44px;
+      height: 40px;
+      background: linear-gradient(135deg, #99ccff, #336699);
+      border-radius: 8px;
+      box-shadow: inset 0 0 5px rgba(255, 255, 255, 0.7);
+    }
+    #player .car-lights {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      width: 36px;
+      height: 15px;
+      display: flex;
+      justify-content: space-between;
+    }
+    #player .car-lights div {
+      width: 12px;
+      height: 15px;
+      background: #ffdd33;
+      border-radius: 3px;
+      box-shadow: 0 0 6px #ffdd33;
+    }
+
+    /* Obstacle = deep pothole */
+    .obstacle {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      top: -60px;
+      z-index: 1;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at center, #1a0000 0%, #330000 40%, #000000 90%);
+      box-shadow:
+        inset 0 6px 10px 3px #3d0000,
+        inset 0 -8px 12px 2px #000000;
+      overflow: hidden;
+      filter: drop-shadow(0 2px 1px rgba(0,0,0,0.7));
+    }
+    .obstacle::before, .obstacle::after {
+      content: '';
+      position: absolute;
+      background: #aa4444;
+      opacity: 0.75;
+      border-radius: 2px;
+      top: 50%;
+      left: 50%;
+      transform-origin: center;
+      box-shadow: 0 0 5px #cc5555;
+    }
+    .obstacle::before {
+      width: 38px;
+      height: 3px;
+      transform: translate(-50%, -50%) rotate(40deg);
+      box-shadow:
+        0 0 6px #ff4444,
+        0 -5px 0 #aa4444,
+        0 5px 0 #aa4444;
+    }
+    .obstacle::after {
+      width: 3px;
+      height: 38px;
+      transform: translate(-50%, -50%) rotate(15deg);
+      box-shadow:
+        0 0 6px #ff4444,
+        -5px 0 0 #aa4444,
+        5px 0 0 #aa4444;
+    }
+
+    #score {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      color: #fff;
+      font-size: 20px;
+      font-weight: 600;
+      text-shadow: 0 0 5px #0ff;
+      z-index: 3;
+    }
+
+    /* Responsive fixes for mobile */
+    @media (max-width: 500px) {
+      #player {
+        width: 45px;
+        height: 75px;
+      }
+      #player .car-body {
+        width: 45px;
+        height: 75px;
+        border-radius: 12px 12px 18px 18px;
+      }
+      #player .car-window {
+        width: 32px;
+        height: 28px;
+        left: 6px;
+        top: 12px;
+        border-radius: 6px;
+      }
+      #player .car-lights {
+        width: 27px;
+        height: 11px;
+        bottom: 9px;
+        left: 8px;
+      }
+      #player .car-lights div {
+        width: 9px;
+        height: 11px;
+        border-radius: 2px;
+      }
+      .obstacle {
+        width: 45px;
+        height: 45px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="screen" role="dialog" aria-modal="true" aria-labelledby="start-title">
+      <h1 id="start-title">Lane Dodger</h1>
+      <p>Drive your car to avoid deep potholes!<br>Use Left/Right arrows or A/D keys to move between lanes.</p>
+      <p>As your score increases, the potholes come faster and faster!</p>
+      <p><strong>Press Space to Start</strong></p>
+      <small>Press R anytime during the game to restart after Game Over</small>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game" aria-label="Lane Dodger game" role="main" tabindex="0">
+      <div id="score" aria-live="polite" aria-atomic="true">Score: 0</div>
+      <div id="player" aria-label="Player car" role="img" tabindex="-1">
+        <div class="car-body">
+          <div class="car-window"></div>
+          <div class="car-lights">
+            <div></div><div></div><div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over-screen" class="screen hidden" role="alert" aria-live="assertive" aria-labelledby="game-over-title" aria-describedby="final-score-text">
+      <h2 id="game-over-title">Game Over</h2>
+      <p id="final-score-text">Your Score: 0</p>
+      <button id="restart-btn" aria-label="Restart game">Restart</button>
+    </div>
+
+  </div>
+
+  <script>
+    (function() {
+      const gameContainer = document.getElementById('game-container');
+      const startScreen = document.getElementById('start-screen');
+      const gameScreen = document.getElementById('game');
+      const gameOverScreen = document.getElementById('game-over-screen');
+      const scoreDisplay = document.getElementById('score');
+      const finalScoreText = document.getElementById('final-score-text');
+      const restartBtn = document.getElementById('restart-btn');
+      const player = document.getElementById('player');
+
+      const lanes = 3;
+      let laneWidth = window.innerWidth / lanes;
+      let currentLane = 1;
+      let score = 0;
+      let isGameOver = false;
+      let gameStarted = false;
+
+      // Difficulty parameters
+      let obstacleSpeed = 5;
+      let spawnRate = 1000;
+
+      let spawnerId;
+      let obstacles = [];
+
+      function updatePlayerPosition() {
+        player.style.left = (currentLane * laneWidth) + laneWidth / 2 - player.offsetWidth / 2 + 'px';
+      }
+
+      function drawLaneLines() {
+        // Remove old lane lines
+        const oldLines = document.querySelectorAll('.lane-line');
+        oldLines.forEach(line => line.remove());
+
+        for(let i = 1; i < lanes; i++) {
+          const line = document.createElement('div');
+          line.classList.add('lane-line');
+          line.style.left = (i * laneWidth - 3) + 'px';
+          gameScreen.appendChild(line);
+        }
+      }
+
+      function createObstacle() {
+        if (isGameOver) return null;
+
+        const obs = document.createElement('div');
+        obs.classList.add('obstacle');
+
+        const lane = Math.floor(Math.random() * lanes);
+        obs.style.left = (lane * laneWidth) + laneWidth / 2 - 30 + 'px';
+        obs.style.top = '-60px';
+
+        gameScreen.appendChild(obs);
+        obstacles.push(obs);
+
+        let top = -60;
+        let speed = obstacleSpeed;
+
+        function move() {
+          if (isGameOver) {
+            obs.remove();
+            return;
+          }
+          top += speed;
+          obs.style.top = top + 'px';
+
+          const obsRect = obs.getBoundingClientRect();
+          const playerRect = player.getBoundingClientRect();
+
+          if (
+            obsRect.bottom > playerRect.top &&
+            obsRect.top < playerRect.bottom &&
+            obsRect.left < playerRect.right &&
+            obsRect.right > playerRect.left
+          ) {
+            endGame();
+            return;
+          }
+
+          if (top > window.innerHeight) {
+            // Passed obstacle
+            score++;
+            scoreDisplay.textContent = 'Score: ' + score;
+            increaseDifficulty();
+            obs.remove();
+            obstacles = obstacles.filter(o => o !== obs);
+            return;
+          }
+          requestAnimationFrame(move);
+        }
+        requestAnimationFrame(move);
+        return obs;
+      }
+
+      function increaseDifficulty() {
+        if (score % 5 === 0) {
+          obstacleSpeed = Math.min(obstacleSpeed + 0.8, 15);
+          spawnRate = Math.max(spawnRate - 100, 350);
+          restartSpawner();
+        }
+      }
+
+      function startSpawner() {
+        spawnerId = setInterval(() => {
+          if (!isGameOver) createObstacle();
+        }, spawnRate);
+      }
+
+      function restartSpawner() {
+        clearInterval(spawnerId);
+        startSpawner();
+      }
+
+      function endGame() {
+        isGameOver = true;
+        // Remove all obstacles
+        obstacles.forEach(o => o.remove());
+        obstacles = [];
+        clearInterval(spawnerId);
+
+        finalScoreText.textContent = `Your Score: ${score}`;
+        gameScreen.style.display = 'none';
+        gameOverScreen.classList.remove('hidden');
+      }
+
+      function resetGame() {
+        // Reset variables
+        isGameOver = false;
+        score = 0;
+        obstacleSpeed = 5;
+        spawnRate = 1000;
+        currentLane = 1;
+        updatePlayerPosition();
+        scoreDisplay.textContent = 'Score: 0';
+        gameOverScreen.classList.add('hidden');
+        gameScreen.style.display = 'block';
+        drawLaneLines();
+        startSpawner();
+      }
+
+      // Keyboard input handling
+      function handleKeydown(e) {
+        if (!gameStarted) {
+          if (e.code === 'Space') {
+            gameStarted = true;
+            startScreen.classList.add('hidden');
+            gameScreen.style.display = 'block';
+            updatePlayerPosition();
+            drawLaneLines();
+            startSpawner();
+          }
+          return;
+        }
+
+        if (isGameOver && (e.key.toLowerCase() === 'r')) {
+          resetGame();
+          return;
+        }
+
+        if (isGameOver) return;
+
+        if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') {
+          if (currentLane > 0) {
+            currentLane--;
+            updatePlayerPosition();
+          }
+        }
+        else if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') {
+          if (currentLane < lanes - 1) {
+            currentLane++;
+            updatePlayerPosition();
+          }
+        }
+      }
+
+      // Button restart
+      restartBtn.addEventListener('click', () => {
+        resetGame();
+      });
+
+      // Initial positioning & resizing
+      function onResize() {
+        laneWidth = window.innerWidth / lanes;
+        updatePlayerPosition();
+        drawLaneLines();
+      }
+      window.addEventListener('resize', onResize);
+
+      // Start listening for keys
+      window.addEventListener('keydown', handleKeydown);
+
+      // Initial draw for start screen
+      onResize();
+
+    })();
+  </script>
+</body>
+</html>
