@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dodge Game</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #111;
+      color: white;
+      font-family: sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    #container {
+      display: flex;
+      margin-top: 20px;
+      position: relative;
+    }
+
+    canvas {
+      background: #222;
+      border: 3px solid #fff;
+    }
+
+    #ui {
+      margin-left: 20px;
+      width: 200px;
+    }
+
+    #score {
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+
+    #instructions {
+      font-size: 14px;
+      white-space: pre-line;
+      margin-top: 10px;
+      line-height: 1.5;
+    }
+
+    #overlay {
+      position: absolute;
+      top: 100px;
+      width: 600px;
+      text-align: center;
+      font-size: 28px;
+      color: white;
+      z-index: 2;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    #restartBtn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 18px;
+      background-color: #0f0;
+      border: none;
+      color: #000;
+      cursor: pointer;
+    }
+
+    #restartBtn:hover {
+      background-color: #0c0;
+    }
+
+    #restartBtn:active {
+      transform: scale(0.98);
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
+
+    <div id="ui">
+      <div id="score">Score: 0s</div>
+      <div id="instructions">
+        <strong>How to Play:</strong>
+        Use arrow keys or WASD to move.
+        Avoid the red squares!
+
+        💚 Green = You  
+        🔴 Red = Enemies
+
+        Survive as long as possible!
+      </div>
+    </div>
+
+    <div id="overlay">
+      <div id="overlayText">Press any key to start</div>
+      <button id="restartBtn" class="hidden">🔁 Restart</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreDiv = document.getElementById("score");
+    const overlay = document.getElementById("overlay");
+    const overlayText = document.getElementById("overlayText");
+    const restartBtn = document.getElementById("restartBtn");
+
+    const WIDTH = canvas.width;
+    const HEIGHT = canvas.height;
+
+    const playerSize = 20;
+    const enemySize = 20;
+
+    let player;
+    let enemies;
+    let keys = {};
+    let lastSpawn;
+    let lastSpeedIncrease;
+    let enemySpeed;
+    let spawnInterval;
+    let startTime;
+    let gameOver = false;
+    let gameStarted = false;
+
+    document.addEventListener("keydown", (e) => {
+      if (!gameStarted) {
+        startGame();
+      }
+      keys[e.key] = true;
+    });
+
+    document.addEventListener("keyup", (e) => {
+      keys[e.key] = false;
+    });
+
+    restartBtn.addEventListener("click", () => {
+      startGame();
+    });
+
+    function initGameState() {
+      player = {
+        x: WIDTH / 2 - playerSize / 2,
+        y: HEIGHT / 2 - playerSize / 2,
+        speed: 3,
+        dx: 0,
+        dy: 0,
+      };
+
+      enemies = [];
+      keys = {};
+      lastSpawn = 0;
+      lastSpeedIncrease = 0;
+      enemySpeed = 1.5;
+      spawnInterval = 2000;
+      startTime = Date.now();
+      gameOver = false;
+    }
+
+    function startGame() {
+      initGameState();
+      gameStarted = true;
+      overlay.classList.add("hidden");
+      restartBtn.classList.add("hidden");
+      spawnEnemy();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function updatePlayer() {
+      player.dx = 0;
+      player.dy = 0;
+
+      if (keys["ArrowUp"] || keys["w"]) player.dy = -player.speed;
+      if (keys["ArrowDown"] || keys["s"]) player.dy = player.speed;
+      if (keys["ArrowLeft"] || keys["a"]) player.dx = -player.speed;
+      if (keys["ArrowRight"] || keys["d"]) player.dx = player.speed;
+
+      player.x += player.dx;
+      player.y += player.dy;
+
+      player.x = Math.max(0, Math.min(WIDTH - playerSize, player.x));
+      player.y = Math.max(0, Math.min(HEIGHT - playerSize, player.y));
+    }
+
+    function spawnEnemy() {
+      const edge = Math.floor(Math.random() * 4);
+      let x, y;
+
+      switch (edge) {
+        case 0: x = Math.random() * WIDTH; y = 0; break;
+        case 1: x = Math.random() * WIDTH; y = HEIGHT; break;
+        case 2: x = 0; y = Math.random() * HEIGHT; break;
+        case 3: x = WIDTH; y = Math.random() * HEIGHT; break;
+      }
+
+      const angle = Math.random() * 2 * Math.PI;
+
+      enemies.push({
+        x,
+        y,
+        dx: Math.cos(angle) * enemySpeed,
+        dy: Math.sin(angle) * enemySpeed,
+        changeDirTimer: Math.random() * 3000 + 1000,
+      });
+    }
+
+    function updateEnemies(deltaTime) {
+      for (let enemy of enemies) {
+        enemy.x += enemy.dx;
+        enemy.y += enemy.dy;
+
+        enemy.changeDirTimer -= deltaTime;
+        if (enemy.changeDirTimer <= 0) {
+          const angle = Math.random() * 2 * Math.PI;
+          enemy.dx = Math.cos(angle) * enemySpeed;
+          enemy.dy = Math.sin(angle) * enemySpeed;
+          enemy.changeDirTimer = Math.random() * 3000 + 1000;
+        }
+
+        if (enemy.x <= 0 || enemy.x >= WIDTH - enemySize) enemy.dx *= -1;
+        if (enemy.y <= 0 || enemy.y >= HEIGHT - enemySize) enemy.dy *= -1;
+      }
+    }
+
+    function checkCollision(a, b) {
+      return (
+        a.x < b.x + enemySize &&
+        a.x + playerSize > b.x &&
+        a.y < b.y + enemySize &&
+        a.y + playerSize > b.y
+      );
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+      // Player
+      ctx.fillStyle = "#0f0";
+      ctx.fillRect(player.x, player.y, playerSize, playerSize);
+
+      // Enemies
+      ctx.fillStyle = "#f00";
+      for (let enemy of enemies) {
+        ctx.fillRect(enemy.x, enemy.y, enemySize, enemySize);
+      }
+    }
+
+    function gameLoop(timestamp) {
+      if (gameOver) return;
+
+      const now = Date.now();
+      const elapsed = now - startTime;
+      const secondsSurvived = Math.floor(elapsed / 1000);
+      scoreDiv.innerText = `Score: ${secondsSurvived}s`;
+
+      const deltaTime = 16;
+
+      updatePlayer();
+      updateEnemies(deltaTime);
+
+      if (now - lastSpawn > spawnInterval) {
+        spawnEnemy();
+        lastSpawn = now;
+      }
+
+      if (now - lastSpeedIncrease > 5000) {
+        enemySpeed += 0.3;
+        lastSpeedIncrease = now;
+        if (spawnInterval > 500) spawnInterval -= 100;
+      }
+
+      for (let enemy of enemies) {
+        if (checkCollision(player, enemy)) {
+          gameOver = true;
+          overlay.classList.remove("hidden");
+          overlayText.innerText = `💥 Game Over!\nYou survived ${secondsSurvived} seconds.`;
+          restartBtn.classList.remove("hidden");
+          return;
+        }
+      }
+
+      draw();
+
+      if (!gameOver) requestAnimationFrame(gameLoop);
+    }
+
+    // Show initial overlay and ensure restart button is hidden
+    overlayText.innerText = "Press any key to start";
+    restartBtn.classList.add("hidden");
+  </script>
+</body>
+</html>
