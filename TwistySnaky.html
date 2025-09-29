@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Emoji Snake (Playable)</title>
+<style>
+  body {
+    margin: 0;
+    background: #1a1a1a;
+    color: #eee;
+    font-family: Arial, sans-serif;
+    display: flex;
+    height: 100vh;
+  }
+  #sidebar {
+    width: 260px;
+    background: #111;
+    padding: 20px;
+    box-sizing: border-box;
+    border-right: 2px solid #0f0;
+  }
+  #sidebar h2 {
+    color: #0f0;
+    margin-top: 0;
+  }
+  #sidebar p { margin: 6px 0; }
+  #score { font-weight: bold; color: #0f0; margin-top: 10px; }
+  #startBtn {
+    background: #0f0;
+    color: #111;
+    font-weight: bold;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    margin-top: 20px;
+    cursor: pointer;
+  }
+  #gameContainer {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #000;
+  }
+  canvas {
+    background: #111;
+    border: 3px solid #0f0;
+    box-shadow: 0 0 12px #0f08;
+  }
+</style>
+</head>
+<body>
+  <div id="sidebar">
+    <h2>Emoji Snake 🐍</h2>
+    <p>🍏 Eat to grow (+10)</p>
+    <p>☠️ Skulls shrink (-15)</p>
+    <p>⚡ Speed boost (3 sec)</p>
+    <p>🌀 Portal: Teleport</p>
+    <p>Walls & yourself = Game Over</p>
+    <div id="score">Score: 0</div>
+    <button id="startBtn">Start Game</button>
+  </div>
+
+  <div id="gameContainer">
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
+  </div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const tileSize = 20;
+const gridCount = canvas.width / tileSize;
+
+const emojis = {
+  fruit: "🍏",
+  poison: "☠️",
+  speed: "⚡",
+  portal: "🌀"
+};
+
+let snake, dir, fruit, poison, speedZone, portals;
+let score=0, running=false, speedBoost=false, boostTimer=0;
+const scoreEl=document.getElementById('score');
+const startBtn=document.getElementById('startBtn');
+
+function resetGame(){
+  snake=[{x:10,y:10}];
+  dir={x:1,y:0};
+  fruit=randomPos();
+  poison=randomPos();
+  speedZone=randomPos();
+  portals=[randomPos(),randomPos()];
+  score=0;updateScore();
+  running=true;
+  speedBoost=false;boostTimer=0;
+}
+
+function randomPos(){
+  return {x:Math.floor(Math.random()*gridCount),y:Math.floor(Math.random()*gridCount)};
+}
+
+function updateScore(){scoreEl.textContent=`Score: ${score}`;}
+
+function drawEmoji(cell,emoji){
+  ctx.font=`${tileSize}px serif`;
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillText(emoji,cell.x*tileSize+tileSize/2,cell.y*tileSize+tileSize/2);
+}
+
+function drawSnake(){
+  ctx.fillStyle="#0f0";
+  snake.forEach(seg=>{
+    ctx.fillRect(seg.x*tileSize,seg.y*tileSize,tileSize,tileSize);
+  });
+}
+
+function update(){
+  // move
+  const head={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
+  // wall collision
+  if(head.x<0||head.x>=gridCount||head.y<0||head.y>=gridCount){gameOver();return;}
+  // self collision
+  if(snake.some(s=>s.x===head.x&&s.y===head.y)){gameOver();return;}
+
+  // portal
+  portals.forEach((p,i)=>{
+    if(head.x===p.x&&head.y===p.y){
+      const other=portals[1-i];
+      head.x=other.x;head.y=other.y;
+    }
+  });
+
+  snake.unshift(head);
+
+  // fruit
+  if(head.x===fruit.x&&head.y===fruit.y){
+    score+=10;updateScore();fruit=randomPos();
+  }
+  // poison
+  else if(head.x===poison.x&&head.y===poison.y){
+    score=Math.max(0,score-15);updateScore();poison=randomPos();
+    if(snake.length>2)snake.pop();
+  }
+  // speedzone
+  else if(head.x===speedZone.x&&head.y===speedZone.y){
+    speedBoost=true;boostTimer=180;speedZone=randomPos();
+  } else {
+    snake.pop();
+  }
+
+  if(speedBoost){
+    boostTimer--;
+    if(boostTimer<=0)speedBoost=false;
+  }
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // grid
+  ctx.strokeStyle='#222';
+  for(let x=0;x<canvas.width;x+=tileSize){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke();}
+  for(let y=0;y<canvas.height;y+=tileSize){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke();}
+  // items
+  drawEmoji(fruit,emojis.fruit);
+  drawEmoji(poison,emojis.poison);
+  drawEmoji(speedZone,emojis.speed);
+  portals.forEach(p=>drawEmoji(p,emojis.portal));
+  drawSnake();
+}
+
+function loop(){
+  if(!running)return;
+  update();
+  draw();
+  setTimeout(()=>requestAnimationFrame(loop),speedBoost?100:150);
+}
+
+function gameOver(){
+  running=false;
+  scoreEl.textContent=`💀 Game Over! Final Score: ${score}`;
+  startBtn.textContent="Retry";
+  startBtn.style.display='block';
+}
+
+startBtn.onclick=()=>{
+  startBtn.style.display='none';
+  resetGame();
+  loop();
+};
+
+window.addEventListener('keydown',e=>{
+  if(!running)return;
+  if(e.key==='ArrowUp'&&dir.y!==1)dir={x:0,y:-1};
+  if(e.key==='ArrowDown'&&dir.y!==-1)dir={x:0,y:1};
+  if(e.key==='ArrowLeft'&&dir.x!==1)dir={x:-1,y:0};
+  if(e.key==='ArrowRight'&&dir.x!==-1)dir={x:1,y:0};
+});
+
+ctx.fillStyle="#0f0";ctx.font="20px monospace";
+ctx.fillText("Press 'Start Game' to play",150,300);
+</script>
+</body>
+</html>
