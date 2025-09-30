@@ -3,292 +3,407 @@
 <head>
   <meta charset="UTF-8" />
   <title>Dodge Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <style>
+    * { box-sizing: border-box; }
     html, body {
-      margin: 0;
-      padding: 0;
+      margin: 0; padding: 0;
       background: #111;
+      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      height: 100%;
+      overflow: hidden;
+      user-select: none;
+    }
+    #overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      padding: 20px;
+      text-align: center;
+      transition: opacity 0.3s ease;
+    }
+    #overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #overlayText {
+      font-size: 22px;
+      margin-bottom: 20px;
+      white-space: pre-line;
+      max-width: 320px;
+      line-height: 1.3;
+    }
+    .btn {
+      padding: 12px 28px;
+      margin: 8px;
+      font-size: 18px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.2s ease;
+      min-width: 140px;
+    }
+    #btnPC {
+      background: #3498db;
       color: white;
-      font-family: sans-serif;
+    }
+    #btnPC:hover {
+      background: #2980b9;
+    }
+    #btnMob {
+      background: #2ecc71;
+      color: black;
+    }
+    #btnMob:hover {
+      background: #27ae60;
+      color: white;
+    }
+    #restartBtn {
+      background: #f1c40f;
+      color: #111;
+      display: none;
+      min-width: 140px;
+    }
+    #restartBtn:hover {
+      background: #d4ac0d;
+    }
+    #score {
+      font-size: 20px;
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(0,0,0,0.4);
+      padding: 8px 14px;
+      border-radius: 6px;
+      user-select: none;
+      z-index: 10;
+      transition: left 0.3s ease, right 0.3s ease;
+    }
+    #score.mobile {
+      left: auto;
+      right: 12px;
+    }
+    #container {
       display: flex;
       justify-content: center;
       align-items: flex-start;
+      flex-wrap: wrap;
+      width: 100%;
+      height: 100%;
+      padding: 12px;
+      gap: 12px;
     }
-
-    #container {
-      display: flex;
-      margin-top: 20px;
-      position: relative;
-    }
-
     canvas {
       background: #222;
       border: 3px solid #fff;
+      margin: 0;
+      flex-shrink: 0;
+      border-radius: 8px;
+      user-select: none;
     }
-
     #ui {
-      margin-left: 20px;
-      width: 200px;
-    }
-
-    #score {
-      font-size: 20px;
-      margin-bottom: 10px;
-    }
-
-    #instructions {
-      font-size: 14px;
+      max-width: 240px;
+      font-size: 16px;
+      line-height: 1.4;
       white-space: pre-line;
-      margin-top: 10px;
-      line-height: 1.5;
+      user-select: none;
+      margin-top: 4px;
     }
-
-    #overlay {
-      position: absolute;
-      top: 100px;
-      width: 600px;
-      text-align: center;
-      font-size: 28px;
-      color: white;
-      z-index: 2;
-    }
-
-    .hidden {
+    #joystick {
       display: none;
+      grid-template-columns: 60px 60px 60px;
+      grid-template-rows: 60px 60px;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+      margin-top: 10px;
+      user-select: none;
     }
-
-    #restartBtn {
-      margin-top: 20px;
-      padding: 10px 20px;
-      font-size: 18px;
-      background-color: #0f0;
-      border: none;
-      color: #000;
+    .joybtn {
+      width: 60px;
+      height: 60px;
+      background: #333;
+      border: 2px solid #fff;
+      border-radius: 8px;
+      font-size: 24px;
+      text-align: center;
+      line-height: 60px;
+      user-select: none;
       cursor: pointer;
+      touch-action: manipulation;
+      transition: background-color 0.15s ease;
+      user-select: none;
     }
-
-    #restartBtn:hover {
-      background-color: #0c0;
+    .joybtn:active {
+      background: #555;
     }
-
-    #restartBtn:active {
-      transform: scale(0.98);
+    @media (max-width: 700px) {
+      #ui { display: none; }
+      #score { display: none; }
+      #score.mobile { display: block; }
+      #joystick { display: grid; }
     }
   </style>
 </head>
 <body>
+
+  <div id="overlay">
+    <div id="overlayText">Choose your device</div>
+    <button id="btnPC" class="btn">🖥️ PC</button>
+    <button id="btnMob" class="btn">📱 Mobile</button>
+    <button id="restartBtn" class="btn">🔁 Restart</button>
+  </div>
+
+  <div id="score">Score: 0s</div>
+
   <div id="container">
-    <canvas id="gameCanvas" width="600" height="600"></canvas>
-
+    <canvas id="gameCanvas" width="480" height="480"></canvas>
     <div id="ui">
-      <div id="score">Score: 0s</div>
-      <div id="instructions">
-        <strong>How to Play:</strong>
-        Use arrow keys or WASD to move.
-        Avoid the red squares!
-
-        💚 Green = You  
-        🔴 Red = Enemies
-
-        Survive as long as possible!
-      </div>
+      <div id="instructions">Avoid red squares for as long as possible.
+Use arrow keys or WASD on PC.
+Use joystick on mobile.</div>
     </div>
-
-    <div id="overlay">
-      <div id="overlayText">Press any key to start</div>
-      <button id="restartBtn" class="hidden">🔁 Restart</button>
+    <div id="joystick">
+      <div></div>
+      <div class="joybtn" data-key="ArrowUp">▲</div>
+      <div></div>
+      <div class="joybtn" data-key="ArrowLeft">◀</div>
+      <div class="joybtn" data-key="ArrowDown">▼</div>
+      <div class="joybtn" data-key="ArrowRight">▶</div>
     </div>
   </div>
 
-  <script>
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-    const scoreDiv = document.getElementById("score");
-    const overlay = document.getElementById("overlay");
-    const overlayText = document.getElementById("overlayText");
-    const restartBtn = document.getElementById("restartBtn");
+<script>
+  const canvas = document.getElementById("gameCanvas");
+  const ctx = canvas.getContext("2d");
+  const overlay = document.getElementById("overlay");
+  const overlayText = document.getElementById("overlayText");
+  const btnPC = document.getElementById("btnPC");
+  const btnMob = document.getElementById("btnMob");
+  const restartBtn = document.getElementById("restartBtn");
+  const scoreDiv = document.getElementById("score");
+  const instructions = document.getElementById("instructions");
+  const joystick = document.getElementById("joystick");
+  const joyButtons = document.querySelectorAll(".joybtn");
 
-    const WIDTH = canvas.width;
-    const HEIGHT = canvas.height;
+  const WIDTH = canvas.width, HEIGHT = canvas.height;
+  const playerSize = 18, enemySize = 18; // slightly smaller boxes
 
-    const playerSize = 20;
-    const enemySize = 20;
+  let player, enemies, keys = {};
+  let enemySpeed, spawnInterval;
+  let lastSpawn = 0, lastSpeedIncrease = 0;
+  let startTime, gameOver = false, gameStarted = false;
+  let isMobile = false;
+  let waitingToStart = false;
 
-    let player;
-    let enemies;
-    let keys = {};
-    let lastSpawn;
-    let lastSpeedIncrease;
-    let enemySpeed;
-    let spawnInterval;
-    let startTime;
-    let gameOver = false;
-    let gameStarted = false;
+  function initGame() {
+    player = { x: WIDTH/2 - playerSize/2, y: HEIGHT/2 - playerSize/2, speed: 3, dx: 0, dy: 0 };
+    enemies = [];
+    keys = {};
+    enemySpeed = 1.5;
+    spawnInterval = 2000;
+    lastSpawn = 0;
+    lastSpeedIncrease = 0;
+    startTime = Date.now();
+    gameOver = false;
+  }
 
-    document.addEventListener("keydown", (e) => {
-      if (!gameStarted) {
+  function startGame() {
+    if (gameStarted) return;
+    initGame();
+    gameStarted = true;
+    waitingToStart = false;
+    overlay.classList.add("hidden");
+    restartBtn.style.display = "none";
+    spawnEnemy();
+    requestAnimationFrame(gameLoop);
+  }
+
+  function spawnEnemy() {
+    const edge = Math.floor(Math.random() * 4);
+    let x, y;
+    switch (edge) {
+      case 0: x = Math.random() * WIDTH; y = 0; break;
+      case 1: x = Math.random() * WIDTH; y = HEIGHT; break;
+      case 2: x = 0; y = Math.random() * HEIGHT; break;
+      case 3: x = WIDTH; y = Math.random() * HEIGHT; break;
+    }
+    const angle = Math.random() * 2 * Math.PI;
+    enemies.push({
+      x, y,
+      dx: Math.cos(angle) * enemySpeed,
+      dy: Math.sin(angle) * enemySpeed,
+      changeDirTimer: Math.random() * 3000 + 1000
+    });
+  }
+
+  function updatePlayer() {
+    player.dx = 0; player.dy = 0;
+    if (keys["ArrowUp"] || keys["w"]) player.dy = -player.speed;
+    if (keys["ArrowDown"] || keys["s"]) player.dy = player.speed;
+    if (keys["ArrowLeft"] || keys["a"]) player.dx = -player.speed;
+    if (keys["ArrowRight"] || keys["d"]) player.dx = player.speed;
+
+    player.x += player.dx;
+    player.y += player.dy;
+
+    player.x = Math.max(0, Math.min(WIDTH - playerSize, player.x));
+    player.y = Math.max(0, Math.min(HEIGHT - playerSize, player.y));
+  }
+
+  function updateEnemies(delta) {
+    for (let e of enemies) {
+      e.x += e.dx;
+      e.y += e.dy;
+      e.changeDirTimer -= delta;
+      if (e.changeDirTimer <= 0) {
+        const a = Math.random() * 2 * Math.PI;
+        e.dx = Math.cos(a) * enemySpeed;
+        e.dy = Math.sin(a) * enemySpeed;
+        e.changeDirTimer = Math.random() * 3000 + 1000;
+      }
+      if (e.x <= 0 || e.x >= WIDTH - enemySize) e.dx *= -1;
+      if (e.y <= 0 || e.y >= HEIGHT - enemySize) e.dy *= -1;
+    }
+  }
+
+  function checkCollision(a, b) {
+    return (
+      a.x < b.x + enemySize &&
+      a.x + playerSize > b.x &&
+      a.y < b.y + enemySize &&
+      a.y + playerSize > b.y
+    );
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+    // player
+    ctx.fillStyle = "#0f0";
+    ctx.fillRect(player.x, player.y, playerSize, playerSize);
+
+    // enemies
+    ctx.fillStyle = "#f00";
+    enemies.forEach(e => ctx.fillRect(e.x, e.y, enemySize, enemySize));
+  }
+
+  function gameLoop(timestamp) {
+    if (gameOver) return;
+    const now = Date.now();
+    const elapsed = now - startTime;
+    const seconds = Math.floor(elapsed / 1000);
+    scoreDiv.innerText = `Score: ${seconds}s`;
+
+    updatePlayer();
+    updateEnemies(16);
+
+    if (now - lastSpawn > spawnInterval) {
+      spawnEnemy();
+      lastSpawn = now;
+    }
+    if (now - lastSpeedIncrease > 5000) {
+      enemySpeed += 0.3;
+      lastSpeedIncrease = now;
+      if (spawnInterval > 500) spawnInterval -= 100;
+    }
+
+    for (let e of enemies) {
+      if (checkCollision(player, e)) {
+        gameOver = true;
+        overlayText.innerText = `💥 Game Over!\nYou survived ${seconds} seconds.`;
+        overlay.classList.remove("hidden");
+        restartBtn.style.display = "inline-block";
+        return;
+      }
+    }
+
+    draw();
+    requestAnimationFrame(gameLoop);
+  }
+
+  // Disable scrolling on arrow keys and spacebar
+  window.addEventListener("keydown", e => {
+    if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key)) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  // Device selection and UI setup
+  btnPC.addEventListener("click", () => {
+    isMobile = false;
+    waitingToStart = true;
+    overlayText.innerText = "Press any key to start";
+    btnPC.style.display = "none";
+    btnMob.style.display = "none";
+    restartBtn.style.display = "none";
+    joystick.style.display = "none";
+    scoreDiv.classList.remove("mobile");
+  });
+
+  btnMob.addEventListener("click", () => {
+    isMobile = true;
+    waitingToStart = true;
+    overlayText.innerText = "Tap a joystick arrow to start";
+    btnPC.style.display = "none";
+    btnMob.style.display = "none";
+    restartBtn.style.display = "none";
+    joystick.style.display = "grid";
+    scoreDiv.classList.add("mobile");
+  });
+
+  restartBtn.addEventListener("click", () => {
+    overlayText.innerText = isMobile ? "Tap a joystick arrow to start" : "Press any key to start";
+    restartBtn.style.display = "none";
+    waitingToStart = true;
+    gameStarted = false;
+    overlay.classList.remove("hidden");
+  });
+
+  // Keyboard input
+  document.addEventListener("keydown", e => {
+    keys[e.key] = true;
+    if (waitingToStart && !gameStarted && !isMobile) {
+      startGame();
+    }
+  });
+  document.addEventListener("keyup", e => {
+    keys[e.key] = false;
+  });
+
+  // Joystick touch input
+  joyButtons.forEach(btn => {
+    const key = btn.getAttribute("data-key");
+    btn.addEventListener("touchstart", e => {
+      e.preventDefault();
+      keys[key] = true;
+      if (waitingToStart && !gameStarted && isMobile) {
         startGame();
       }
-      keys[e.key] = true;
+    }, { passive: false });
+    btn.addEventListener("touchend", e => {
+      e.preventDefault();
+      keys[key] = false;
+    }, { passive: false });
+    btn.addEventListener("touchcancel", e => {
+      keys[key] = false;
     });
+  });
 
-    document.addEventListener("keyup", (e) => {
-      keys[e.key] = false;
-    });
+  // Initially, show overlay with device buttons only, hide restart button
+  restartBtn.style.display = "none";
+  overlay.classList.remove("hidden");
+  joystick.style.display = "none";
+  scoreDiv.classList.remove("mobile");
 
-    restartBtn.addEventListener("click", () => {
-      startGame();
-    });
+</script>
 
-    function initGameState() {
-      player = {
-        x: WIDTH / 2 - playerSize / 2,
-        y: HEIGHT / 2 - playerSize / 2,
-        speed: 3,
-        dx: 0,
-        dy: 0,
-      };
-
-      enemies = [];
-      keys = {};
-      lastSpawn = 0;
-      lastSpeedIncrease = 0;
-      enemySpeed = 1.5;
-      spawnInterval = 2000;
-      startTime = Date.now();
-      gameOver = false;
-    }
-
-    function startGame() {
-      initGameState();
-      gameStarted = true;
-      overlay.classList.add("hidden");
-      restartBtn.classList.add("hidden");
-      spawnEnemy();
-      requestAnimationFrame(gameLoop);
-    }
-
-    function updatePlayer() {
-      player.dx = 0;
-      player.dy = 0;
-
-      if (keys["ArrowUp"] || keys["w"]) player.dy = -player.speed;
-      if (keys["ArrowDown"] || keys["s"]) player.dy = player.speed;
-      if (keys["ArrowLeft"] || keys["a"]) player.dx = -player.speed;
-      if (keys["ArrowRight"] || keys["d"]) player.dx = player.speed;
-
-      player.x += player.dx;
-      player.y += player.dy;
-
-      player.x = Math.max(0, Math.min(WIDTH - playerSize, player.x));
-      player.y = Math.max(0, Math.min(HEIGHT - playerSize, player.y));
-    }
-
-    function spawnEnemy() {
-      const edge = Math.floor(Math.random() * 4);
-      let x, y;
-
-      switch (edge) {
-        case 0: x = Math.random() * WIDTH; y = 0; break;
-        case 1: x = Math.random() * WIDTH; y = HEIGHT; break;
-        case 2: x = 0; y = Math.random() * HEIGHT; break;
-        case 3: x = WIDTH; y = Math.random() * HEIGHT; break;
-      }
-
-      const angle = Math.random() * 2 * Math.PI;
-
-      enemies.push({
-        x,
-        y,
-        dx: Math.cos(angle) * enemySpeed,
-        dy: Math.sin(angle) * enemySpeed,
-        changeDirTimer: Math.random() * 3000 + 1000,
-      });
-    }
-
-    function updateEnemies(deltaTime) {
-      for (let enemy of enemies) {
-        enemy.x += enemy.dx;
-        enemy.y += enemy.dy;
-
-        enemy.changeDirTimer -= deltaTime;
-        if (enemy.changeDirTimer <= 0) {
-          const angle = Math.random() * 2 * Math.PI;
-          enemy.dx = Math.cos(angle) * enemySpeed;
-          enemy.dy = Math.sin(angle) * enemySpeed;
-          enemy.changeDirTimer = Math.random() * 3000 + 1000;
-        }
-
-        if (enemy.x <= 0 || enemy.x >= WIDTH - enemySize) enemy.dx *= -1;
-        if (enemy.y <= 0 || enemy.y >= HEIGHT - enemySize) enemy.dy *= -1;
-      }
-    }
-
-    function checkCollision(a, b) {
-      return (
-        a.x < b.x + enemySize &&
-        a.x + playerSize > b.x &&
-        a.y < b.y + enemySize &&
-        a.y + playerSize > b.y
-      );
-    }
-
-    function draw() {
-      ctx.clearRect(0, 0, WIDTH, HEIGHT);
-
-      // Player
-      ctx.fillStyle = "#0f0";
-      ctx.fillRect(player.x, player.y, playerSize, playerSize);
-
-      // Enemies
-      ctx.fillStyle = "#f00";
-      for (let enemy of enemies) {
-        ctx.fillRect(enemy.x, enemy.y, enemySize, enemySize);
-      }
-    }
-
-    function gameLoop(timestamp) {
-      if (gameOver) return;
-
-      const now = Date.now();
-      const elapsed = now - startTime;
-      const secondsSurvived = Math.floor(elapsed / 1000);
-      scoreDiv.innerText = `Score: ${secondsSurvived}s`;
-
-      const deltaTime = 16;
-
-      updatePlayer();
-      updateEnemies(deltaTime);
-
-      if (now - lastSpawn > spawnInterval) {
-        spawnEnemy();
-        lastSpawn = now;
-      }
-
-      if (now - lastSpeedIncrease > 5000) {
-        enemySpeed += 0.3;
-        lastSpeedIncrease = now;
-        if (spawnInterval > 500) spawnInterval -= 100;
-      }
-
-      for (let enemy of enemies) {
-        if (checkCollision(player, enemy)) {
-          gameOver = true;
-          overlay.classList.remove("hidden");
-          overlayText.innerText = `💥 Game Over!\nYou survived ${secondsSurvived} seconds.`;
-          restartBtn.classList.remove("hidden");
-          return;
-        }
-      }
-
-      draw();
-
-      if (!gameOver) requestAnimationFrame(gameLoop);
-    }
-
-    // Show initial overlay and ensure restart button is hidden
-    overlayText.innerText = "Press any key to start";
-    restartBtn.classList.add("hidden");
-  </script>
 </body>
 </html>
