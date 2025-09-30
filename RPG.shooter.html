@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Rocket Shooter Game</title>
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      user-select: none;
+    }
+    #gameCanvas {
+      display: block;
+      margin: 0 auto;
+      background: #222;
+      border: 2px solid #444;
+    }
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <div id="hud">Lives: <span id="lives">10</span></div>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const WIDTH = canvas.width;
+    const HEIGHT = canvas.height;
+
+    // Game variables
+    let keys = {};
+    let playerLives = 10;
+    let gameOver = false;
+
+    // Player
+    const player = {
+      x: WIDTH / 2 - 20,
+      y: HEIGHT - 70,
+      width: 40,
+      height: 60,
+      speed: 5
+    };
+
+    // Arrays for bullets and enemies
+    let bullets = [];
+    let enemyBullets = [];
+    let enemies = [];
+
+    // Cooldown to control player shooting speed
+    let shootCooldown = 0;
+
+    // Load player rocket image from external file
+    const playerImg = new Image();
+    playerImg.src = "rocket.png";
+
+    // Bullet class
+    class Bullet {
+      constructor(x, y, dy, fromEnemy = false) {
+        this.x = x;
+        this.y = y;
+        this.dy = dy;
+        this.width = 5;
+        this.height = 10;
+        this.fromEnemy = fromEnemy;
+        this.color = fromEnemy ? "red" : "white";
+      }
+
+      update() {
+        this.y += this.dy;
+      }
+
+      draw() {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+      }
+    }
+
+    // Enemy class
+    class Enemy {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.width = 30;
+        this.height = 30;
+        this.color = "orange";
+        this.fireCooldown = Math.floor(Math.random() * 120 + 60);
+      }
+
+      update() {
+        this.fireCooldown--;
+        if (this.fireCooldown <= 0) {
+          // Fire bullet downwards
+          enemyBullets.push(new Bullet(this.x + this.width / 2 - 2.5, this.y + this.height, 4, true));
+          this.fireCooldown = Math.floor(Math.random() * 120 + 60);
+        }
+      }
+
+      draw() {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+      }
+    }
+
+    // Spawn enemies grid
+    function spawnEnemies() {
+      enemies = [];
+      for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 5; col++) {
+          enemies.push(new Enemy(100 + col * 120, 50 + row * 60));
+        }
+      }
+    }
+
+    // Draw player with rocket image
+    function drawPlayer() {
+      ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
+    }
+
+    // Handle player input
+    function handleInput() {
+      if (keys["ArrowLeft"] && player.x > 0) {
+        player.x -= player.speed;
+      }
+      if (keys["ArrowRight"] && player.x + player.width < WIDTH) {
+        player.x += player.speed;
+      }
+      if (keys[" "] && shootCooldown <= 0) {
+        // Shoot bullet from player
+        bullets.push(new Bullet(player.x + player.width / 2 - 2.5, player.y, -8));
+        shootCooldown = 15;
+      }
+    }
+
+    // Handle bullets logic (update, draw, collision)
+    function handleBullets() {
+      // Player bullets
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        let b = bullets[i];
+        b.update();
+        b.draw();
+
+        if (b.y + b.height < 0) {
+          bullets.splice(i, 1);
+          continue;
+        }
+
+        // Check collision with enemies
+        for (let j = enemies.length - 1; j >= 0; j--) {
+          let e = enemies[j];
+          if (
+            b.x < e.x + e.width &&
+            b.x + b.width > e.x &&
+            b.y < e.y + e.height &&
+            b.y + b.height > e.y &&
+            !b.fromEnemy
+          ) {
+            enemies.splice(j, 1);
+            bullets.splice(i, 1);
+            break;
+          }
+        }
+      }
+
+      // Enemy bullets
+      for (let i = enemyBullets.length - 1; i >= 0; i--) {
+        let b = enemyBullets[i];
+        b.update();
+        b.draw();
+
+        if (b.y > HEIGHT) {
+          enemyBullets.splice(i, 1);
+          continue;
+        }
+
+        // Check collision with player
+        if (
+          b.x < player.x + player.width &&
+          b.x + b.width > player.x &&
+          b.y < player.y + player.height &&
+          b.y + b.height > player.y
+        ) {
+          playerLives--;
+          document.getElementById("lives").textContent = playerLives;
+          enemyBullets.splice(i, 1);
+          if (playerLives <= 0) {
+            gameOver = true;
+          }
+        }
+      }
+    }
+
+    // Handle enemies update and draw
+    function handleEnemies() {
+      enemies.forEach((enemy) => {
+        enemy.update();
+        enemy.draw();
+      });
+    }
+
+    // Main game update loop
+    function update() {
+      if (gameOver) {
+        ctx.clearRect(0, 0, WIDTH, HEIGHT);
+        ctx.fillStyle = "white";
+        ctx.font = "60px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("GAME OVER", WIDTH / 2, HEIGHT / 2);
+        return;
+      }
+
+      ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+      handleInput();
+      drawPlayer();
+      handleEnemies();
+      handleBullets();
+
+      if (shootCooldown > 0) shootCooldown--;
+
+      if (enemies.length === 0) {
+        spawnEnemies();
+      }
+
+      requestAnimationFrame(update);
+    }
+
+    // Input listeners
+    window.addEventListener("keydown", (e) => {
+      if (e.key === " " || e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        e.preventDefault(); // prevent page scrolling on arrow keys and space
+      }
+      keys[e.key] = true;
+    });
+
+    window.addEventListener("keyup", (e) => {
+      keys[e.key] = false;
+    });
+
+    // Start game only after player image loads
+    playerImg.onload = () => {
+      spawnEnemies();
+      update();
+    };
+
+    // Handle image load error
+    playerImg.onerror = () => {
+      alert("Failed to load rocket.png image! Please ensure the file is in the same folder.");
+    };
+  </script>
+</body>
+</html>
