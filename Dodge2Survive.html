@@ -1,19 +1,22 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
   <meta charset="UTF-8" />
-  <title>Dodge Game</title>
+  <title>Dodge Game with Fixed Circular Joystick</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
     html, body {
       margin: 0; padding: 0;
       background: #111;
-      color: #fff;
+      color: #eee;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       height: 100%;
       overflow: hidden;
-      user-select: none;
     }
     #overlay {
       position: fixed;
@@ -35,9 +38,9 @@
     #overlayText {
       font-size: 22px;
       margin-bottom: 20px;
-      white-space: pre-line;
       max-width: 320px;
       line-height: 1.3;
+      white-space: pre-line;
     }
     .btn {
       padding: 12px 28px;
@@ -116,39 +119,57 @@
       user-select: none;
       margin-top: 4px;
     }
-    #joystick {
+
+    /* JOYSTICK STYLES */
+    #joystickContainer {
       display: none;
-      grid-template-columns: 60px 60px 60px;
-      grid-template-rows: 60px 60px;
-      gap: 10px;
-      justify-content: center;
-      align-items: center;
+      position: relative;
+      width: 160px;
+      height: 160px;
+      background: #222;
+      border: 3px solid #fff;
+      border-radius: 50%;
       margin-top: 10px;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+    }
+    #joystickBase {
+      position: absolute;
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      background: #444;
+      opacity: 0.5;
+      top: 0; left: 0;
+    }
+    #joystickStick {
+      position: absolute;
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: #0f0;
+      top: 45px; /* center in 160px base: (160-70)/2=45 */
+      left: 45px;
+      transition: top 0.05s ease, left 0.05s ease;
+      box-shadow: 0 0 10px #0f0;
+      touch-action: none;
       user-select: none;
     }
-    .joybtn {
-      width: 60px;
-      height: 60px;
-      background: #333;
-      border: 2px solid #fff;
-      border-radius: 8px;
-      font-size: 24px;
-      text-align: center;
-      line-height: 60px;
-      user-select: none;
-      cursor: pointer;
-      touch-action: manipulation;
-      transition: background-color 0.15s ease;
-      user-select: none;
-    }
-    .joybtn:active {
-      background: #555;
-    }
+
     @media (max-width: 700px) {
       #ui { display: none; }
       #score { display: none; }
       #score.mobile { display: block; }
-      #joystick { display: grid; }
+      #joystickContainer { display: block; }
+      #container {
+        justify-content: center;
+        align-items: center;
+        gap: 0;
+      }
     }
   </style>
 </head>
@@ -170,13 +191,9 @@
 Use arrow keys or WASD on PC.
 Use joystick on mobile.</div>
     </div>
-    <div id="joystick">
-      <div></div>
-      <div class="joybtn" data-key="ArrowUp">▲</div>
-      <div></div>
-      <div class="joybtn" data-key="ArrowLeft">◀</div>
-      <div class="joybtn" data-key="ArrowDown">▼</div>
-      <div class="joybtn" data-key="ArrowRight">▶</div>
+    <div id="joystickContainer">
+      <div id="joystickBase"></div>
+      <div id="joystickStick"></div>
     </div>
   </div>
 
@@ -189,9 +206,8 @@ Use joystick on mobile.</div>
   const btnMob = document.getElementById("btnMob");
   const restartBtn = document.getElementById("restartBtn");
   const scoreDiv = document.getElementById("score");
-  const instructions = document.getElementById("instructions");
-  const joystick = document.getElementById("joystick");
-  const joyButtons = document.querySelectorAll(".joybtn");
+  const joystickContainer = document.getElementById("joystickContainer");
+  const joystickStick = document.getElementById("joystickStick");
 
   const WIDTH = canvas.width, HEIGHT = canvas.height;
   const playerSize = 18, enemySize = 18; // slightly smaller boxes
@@ -202,6 +218,13 @@ Use joystick on mobile.</div>
   let startTime, gameOver = false, gameStarted = false;
   let isMobile = false;
   let waitingToStart = false;
+
+  // Joystick variables
+  const joystickRadius = 80;  // radius of joystick container
+  const stickRadius = 35;     // radius of joystick stick (half of 70px width)
+  let joystickPos = {x: joystickRadius, y: joystickRadius}; // center position fixed
+  let dragging = false;
+  let dragStart = null;
 
   function initGame() {
     player = { x: WIDTH/2 - playerSize/2, y: HEIGHT/2 - playerSize/2, speed: 3, dx: 0, dy: 0 };
@@ -245,14 +268,19 @@ Use joystick on mobile.</div>
   }
 
   function updatePlayer() {
-    player.dx = 0; player.dy = 0;
-    if (keys["ArrowUp"] || keys["w"]) player.dy = -player.speed;
-    if (keys["ArrowDown"] || keys["s"]) player.dy = player.speed;
-    if (keys["ArrowLeft"] || keys["a"]) player.dx = -player.speed;
-    if (keys["ArrowRight"] || keys["d"]) player.dx = player.speed;
-
-    player.x += player.dx;
-    player.y += player.dy;
+    if (isMobile) {
+      // Use dx and dy already set by joystick
+      player.x += player.dx;
+      player.y += player.dy;
+    } else {
+      player.dx = 0; player.dy = 0;
+      if (keys["ArrowUp"] || keys["w"]) player.dy = -player.speed;
+      if (keys["ArrowDown"] || keys["s"]) player.dy = player.speed;
+      if (keys["ArrowLeft"] || keys["a"]) player.dx = -player.speed;
+      if (keys["ArrowRight"] || keys["d"]) player.dx = player.speed;
+      player.x += player.dx;
+      player.y += player.dy;
+    }
 
     player.x = Math.max(0, Math.min(WIDTH - playerSize, player.x));
     player.y = Math.max(0, Math.min(HEIGHT - playerSize, player.y));
@@ -344,23 +372,23 @@ Use joystick on mobile.</div>
     btnPC.style.display = "none";
     btnMob.style.display = "none";
     restartBtn.style.display = "none";
-    joystick.style.display = "none";
+    joystickContainer.style.display = "none";
     scoreDiv.classList.remove("mobile");
   });
 
   btnMob.addEventListener("click", () => {
     isMobile = true;
     waitingToStart = true;
-    overlayText.innerText = "Tap a joystick arrow to start";
+    overlayText.innerText = "Use joystick to start";
     btnPC.style.display = "none";
     btnMob.style.display = "none";
     restartBtn.style.display = "none";
-    joystick.style.display = "grid";
+    joystickContainer.style.display = "block";
     scoreDiv.classList.add("mobile");
   });
 
   restartBtn.addEventListener("click", () => {
-    overlayText.innerText = isMobile ? "Tap a joystick arrow to start" : "Press any key to start";
+    overlayText.innerText = isMobile ? "Use joystick to start" : "Press any key to start";
     restartBtn.style.display = "none";
     waitingToStart = true;
     gameStarted = false;
@@ -378,30 +406,108 @@ Use joystick on mobile.</div>
     keys[e.key] = false;
   });
 
-  // Joystick touch input
-  joyButtons.forEach(btn => {
-    const key = btn.getAttribute("data-key");
-    btn.addEventListener("touchstart", e => {
-      e.preventDefault();
-      keys[key] = true;
-      if (waitingToStart && !gameStarted && isMobile) {
-        startGame();
-      }
-    }, { passive: false });
-    btn.addEventListener("touchend", e => {
-      e.preventDefault();
-      keys[key] = false;
-    }, { passive: false });
-    btn.addEventListener("touchcancel", e => {
-      keys[key] = false;
-    });
+  // JOYSTICK LOGIC
+  function setStickPosition(x, y) {
+    // Clamp stick within joystick radius circle
+    const dx = x - joystickRadius;
+    const dy = y - joystickRadius;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const maxDist = joystickRadius - stickRadius; // max stick distance from center
+
+    let clampedX = dx;
+    let clampedY = dy;
+    if (dist > maxDist) {
+      const angle = Math.atan2(dy, dx);
+      clampedX = Math.cos(angle) * maxDist;
+      clampedY = Math.sin(angle) * maxDist;
+    }
+    joystickStick.style.left = (joystickRadius - stickRadius + clampedX) + "px";
+    joystickStick.style.top = (joystickRadius - stickRadius + clampedY) + "px";
+
+    // Normalize movement vector -1 to 1
+    const normX = clampedX / maxDist;
+    const normY = clampedY / maxDist;
+
+    // Set player dx, dy proportional to normX and normY
+    player.dx = normX * player.speed;
+    player.dy = normY * player.speed;
+  }
+
+  function resetStick() {
+    joystickStick.style.left = (joystickRadius - stickRadius) + "px";
+    joystickStick.style.top = (joystickRadius - stickRadius) + "px";
+    player.dx = 0;
+    player.dy = 0;
+  }
+
+  joystickContainer.addEventListener("touchstart", e => {
+    e.preventDefault();
+    dragging = true;
+    if (waitingToStart && !gameStarted) {
+      startGame();
+    }
+    const touch = e.targetTouches[0];
+    const rect = joystickContainer.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    setStickPosition(x, y);
+  }, { passive: false });
+
+  joystickContainer.addEventListener("touchmove", e => {
+    if (!dragging) return;
+    e.preventDefault();
+    const touch = e.targetTouches[0];
+    const rect = joystickContainer.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    setStickPosition(x, y);
+  }, { passive: false });
+
+  joystickContainer.addEventListener("touchend", e => {
+    e.preventDefault();
+    dragging = false;
+    resetStick();
+  }, { passive: false });
+
+  joystickContainer.addEventListener("touchcancel", e => {
+    dragging = false;
+    resetStick();
   });
 
-  // Initially, show overlay with device buttons only, hide restart button
-  restartBtn.style.display = "none";
-  overlay.classList.remove("hidden");
-  joystick.style.display = "none";
-  scoreDiv.classList.remove("mobile");
+  // Prevent mouse scrolling when arrows pressed (for PC)
+  window.addEventListener("keydown", e => {
+    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(e.key)) {
+      e.preventDefault();
+    }
+  }, { passive: false
+  });
+
+  // For PC: Start game on any key press only if waiting to start
+  window.addEventListener("keydown", e => {
+    if (waitingToStart && !gameStarted && !isMobile) {
+      startGame();
+    }
+  });
+
+  // Prevent scrolling on touch for mobile joystick container
+  joystickContainer.addEventListener("touchmove", e => {
+    e.preventDefault();
+  }, { passive: false });
+
+  // On load: show overlay, reset UI
+  function resetUI() {
+    overlayText.innerText = "Choose your device";
+    btnPC.style.display = "inline-block";
+    btnMob.style.display = "inline-block";
+    restartBtn.style.display = "none";
+    joystickContainer.style.display = "none";
+    scoreDiv.classList.remove("mobile");
+    overlay.classList.remove("hidden");
+    gameStarted = false;
+    waitingToStart = false;
+    player = null;
+  }
+  resetUI();
 
 </script>
 
