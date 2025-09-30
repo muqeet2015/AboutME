@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Zombie Outpost Defense with Upgrades</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html, body {
+      margin: 0; padding: 0;
+      height: 100%;
+      background: radial-gradient(#000 0%, #111 100%);
+      font-family: Arial, sans-serif;
+      color: #0ff;
+      user-select: none;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 15px;
+      padding: 10px;
+    }
+    #gameContainer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #000c;
+      border: 3px solid #0ff;
+      border-radius: 10px;
+      padding: 10px;
+      box-shadow: 0 0 20px #0ff8;
+      user-select: none;
+      position: relative;
+    }
+    canvas {
+      display: block;
+      border: 3px solid #0ff;
+      border-radius: 8px;
+      background: #000;
+      box-shadow: 0 0 15px #0ff8;
+    }
+    #hud {
+      margin-top: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      user-select: none;
+      width: 100%;
+      text-align: center;
+    }
+    #chargeBar {
+      width: 180px;
+      height: 14px;
+      background: #222;
+      border: 2px solid #0ff;
+      border-radius: 10px;
+      margin: 6px auto;
+      position: relative;
+      box-shadow: inset 0 0 6px #0ff7;
+    }
+    #chargeFill {
+      height: 100%;
+      width: 0%;
+      background: #0ff;
+      border-radius: 8px;
+      transition: width 0.1s linear;
+      box-shadow: 0 0 10px #0ff;
+    }
+    #infoText {
+      color: #aaa;
+      font-size: 13px;
+      margin-bottom: 6px;
+      font-style: italic;
+    }
+    /* Smaller upgrade panel */
+    #upgradePanel {
+      display: none;
+      background: #000c;
+      border: 2px solid #0ff;
+      border-radius: 10px;
+      padding: 10px;
+      width: 220px;
+      margin-top: 15px;
+      box-shadow: 0 0 15px #0ff;
+      font-size: 14px;
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 10;
+    }
+    #upgradePanel h2 {
+      margin-top: 0;
+      color: #0ff;
+      font-size: 18px;
+      text-align: center;
+    }
+    #upgradePanel button {
+      background: #0ff;
+      border: none;
+      color: #000;
+      padding: 6px 10px;
+      margin: 4px 2px;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 5px;
+      font-size: 14px;
+      width: 100%;
+      transition: background 0.3s ease;
+    }
+    #upgradePanel button:hover {
+      background: #0cc;
+    }
+    #upgradePoints {
+      font-weight: bold;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    #instructions {
+      max-width: 280px;
+      background: #000c;
+      border: 3px solid #0ff;
+      border-radius: 10px;
+      padding: 15px;
+      font-size: 14px;
+      line-height: 1.4;
+      box-shadow: 0 0 20px #0ff;
+      user-select: none;
+      color: #0ff;
+      height: fit-content;
+    }
+    #instructions h2 {
+      margin-top: 0;
+      color: #0ff;
+      font-size: 20px;
+    }
+    #instructions ul {
+      padding-left: 20px;
+      text-align: left;
+    }
+    #instructions li {
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="gameContainer">
+  <canvas id="gameCanvas" width="700" height="480"></canvas>
+
+  <div id="hud">
+    Health: <span id="health">100</span> |
+    Shield: <span id="shield">50</span> |
+    Wave: <span id="wave">1</span>
+    <div id="chargeBar"><div id="chargeFill"></div></div>
+    <div id="infoText">Hold SPACE to charge powerful attack</div>
+  </div>
+
+  <div id="upgradePanel">
+    <h2>Upgrade Base</h2>
+    <div id="upgradePoints">Upgrade Points: 3</div>
+    <button id="upgradeHealthBtn">Health +20 (Cost: 1)</button>
+    <button id="upgradeShieldBtn">Shield +15 (Cost: 1)</button>
+    <button id="upgradeAttackBtn">Attack +0.5 (Cost: 1)</button>
+    <button id="startNextWaveBtn">Start Next Wave</button>
+  </div>
+</div>
+
+<div id="instructions">
+  <h2>Instructions</h2>
+  <ul>
+    <li><b>Move:</b> Left / Right Arrows</li>
+    <li><b>Shoot:</b> Tap SPACE</li>
+    <li><b>Charged Shot:</b> Hold SPACE then release</li>
+    <li><b>Upgrade:</b> Between waves, spend points</li>
+    <li><b>Waves:</b> Defeat 20 waves to win</li>
+    <li><b>Boss Waves:</b> Every 3rd wave is a boss!</li>
+    <li><b>Shield:</b> Regenerates slowly</li>
+    <li><b>Don’t let enemies reach your base!</b></li>
+  </ul>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const WIDTH = canvas.width;
+  const HEIGHT = canvas.height;
+
+  const healthEl = document.getElementById('health');
+  const shieldEl = document.getElementById('shield');
+  const waveEl = document.getElementById('wave');
+  const chargeFill = document.getElementById('chargeFill');
+
+  const upgradePanel = document.getElementById('upgradePanel');
+  const upgradePointsEl = document.getElementById('upgradePoints');
+  const upgradeHealthBtn = document.getElementById('upgradeHealthBtn');
+  const upgradeShieldBtn = document.getElementById('upgradeShieldBtn');
+  const upgradeAttackBtn = document.getElementById('upgradeAttackBtn');
+  const startNextWaveBtn = document.getElementById('startNextWaveBtn');
+
+  let upgradePoints = 3;
+  let inUpgradePhase = false;
+
+  const player = {
+    x: WIDTH / 2 - 20,
+    y: HEIGHT - 90,
+    width: 40,
+    height: 50,
+    speed: 6,
+    maxHealth: 100,
+    health: 100,
+    maxShield: 50,
+    shield: 50,
+    shieldRegen: 0.06,
+    attackPower: 1
+  };
+
+  let charge = 0;
+  let charging = false;
+  let bullets = [];
+  let enemyBullets = [];
+  let enemies = [];
+  let keys = {};
+  let wave = 1;
+  let gameOver = false;
+  let victory = false;
+  let finalVictory = false;
+
+  class Bullet {
+    constructor(x, y, dy, power = 1, fromEnemy = false) {
+      this.x = x;
+      this.y = y;
+      this.dy = dy;
+      this.power = power;
+      this.fromEnemy = fromEnemy;
+    }
+    update() {
+      this.y += this.dy;
+    }
+    draw() {
+      ctx.fillStyle = this.fromEnemy ? '#f55' : '#0ff';
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, 4 + this.power, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  class Enemy {
+    constructor(x, y, isBoss = false) {
+      this.x = x;
+      this.y = y;
+      this.width = isBoss ? 70 : 36;
+      this.height = isBoss ? 70 : 36;
+      this.speedX = isBoss ? 0.7 : 1;
+      this.isBoss = isBoss;
+      this.maxHealth = isBoss ? 120 + wave * 12 : 3 + Math.floor(wave / 2);
+      this.health = this.maxHealth;
+      this.shootCooldown = Math.random() * 100 + 100;
+    }
+
+    update() {
+      this.x += this.speedX;
+      if (this.x < 0 || this.x + this.width > WIDTH) this.speedX *= -1;
+      this.shootCooldown--;
+      if (this.shootCooldown <= 0) {
+        enemyBullets.push(new Bullet(this.x + this.width / 2, this.y + this.height, 3 + wave / 5, 1, true));
+        this.shootCooldown = Math.random() * 120 + 100;
+      }
+    }
+
+    draw() {
+      ctx.fillStyle = this.isBoss ? '#f00' : '#a00';
+      ctx.fillRect(this.x, this.y, this.width, this.height);
+      // health bar
+      ctx.fillStyle = '#0f0';
+      let hpWidth = (this.health / this.maxHealth) * this.width;
+      ctx.fillRect(this.x, this.y - 6, hpWidth, 4);
+      ctx.strokeStyle = '#fff';
+      ctx.strokeRect(this.x, this.y - 6, this.width, 4);
+    }
+  }
+
+  function rectsCollide(r1, r2) {
+    return !(r2.x > r1.x + r1.width || 
+             r2.x + r2.width < r1.x || 
+             r2.y > r1.y + r1.height ||
+             r2.y + r2.height < r1.y);
+  }
+
+  function circleRectCollide(cx, cy, r, rx, ry, rw, rh) {
+    let closestX = Math.max(rx, Math.min(cx, rx + rw));
+    let closestY = Math.max(ry, Math.min(cy, ry + rh));
+    let dx = cx - closestX;
+    let dy = cy - closestY;
+    return (dx * dx + dy * dy) < (r * r);
+  }
+
+  function spawnWave() {
+    enemies = [];
+    const isBossWave = wave % 3 === 0;
+    if (isBossWave) {
+      enemies.push(new Enemy(WIDTH / 2 - 35, 30, true));
+    } else {
+      let count = 5 + wave;
+      for (let i = 0; i < count; i++) {
+        let ex = 40 + (i % 10) * 60;
+        let ey = 20 + Math.floor(i / 10) * 50;
+        enemies.push(new Enemy(ex, ey, false));
+      }
+    }
+  }
+
+  function resetGame() {
+    wave = 1;
+    player.health = player.maxHealth;
+    player.shield = player.maxShield;
+    upgradePoints = 3;
+    bullets = [];
+    enemyBullets = [];
+    enemies = [];
+    gameOver = false;
+    victory = false;
+    finalVictory = false;
+    inUpgradePhase = false;
+    spawnWave();
+    updateHud();
+    hideUpgradePanel();
+  }
+
+  function updateHud() {
+    healthEl.textContent = Math.floor(player.health);
+    shieldEl.textContent = Math.floor(player.shield);
+    waveEl.textContent = wave;
+    upgradePointsEl.textContent = `Upgrade Points: ${upgradePoints}`;
+  }
+
+  function showUpgradePanel() {
+    inUpgradePhase = true;
+    upgradePanel.style.display = 'block';
+  }
+
+  function hideUpgradePanel() {
+    inUpgradePhase = false;
+    upgradePanel.style.display = 'none';
+  }
+
+  function gameLoop() {
+    if (gameOver || victory || finalVictory) {
+      drawEndScreen();
+      return;
+    }
+    if (inUpgradePhase) {
+      // Pause enemy movement and bullets, but still draw everything
+      drawGame();
+      return;
+    }
+    updateGame();
+    drawGame();
+    requestAnimationFrame(gameLoop);
+  }
+
+  function updateGame() {
+    // Move player
+    if (keys['ArrowLeft']) player.x -= player.speed;
+    if (keys['ArrowRight']) player.x += player.speed;
+    if (player.x < 0) player.x = 0;
+    if (player.x + player.width > WIDTH) player.x = WIDTH - player.width;
+
+    // Charge shot
+    if (charging) {
+      charge += 0.4;
+      if (charge > 100) charge = 100;
+    } else {
+      if (charge > 0) {
+        // Fire charged bullet
+        bullets.push(new Bullet(player.x + player.width / 2, player.y, -7, player.attackPower + charge / 20));
+        charge = 0;
+      }
+    }
+
+    // Update bullets
+    bullets.forEach((b, i) => {
+      b.update();
+      if (b.y < -10) bullets.splice(i, 1);
+    });
+
+    // Update enemy bullets
+    enemyBullets.forEach((b, i) => {
+      b.update();
+      if (b.y > HEIGHT + 10) enemyBullets.splice(i, 1);
+    });
+
+    // Update enemies
+    enemies.forEach((e, ei) => {
+      e.update();
+
+      // Enemy touches base (bottom area)
+      if (e.y + e.height >= HEIGHT - 30) {
+        player.health -= 10;
+        enemies.splice(ei, 1);
+        if (player.health <= 0) {
+          player.health = 0;
+          gameOver = true;
+        }
+      }
+    });
+
+    // Bullets hitting enemies
+    bullets.forEach((b, bi) => {
+      enemies.forEach((e, ei) => {
+        if (circleRectCollide(b.x, b.y, 5 + b.power, e.x, e.y, e.width, e.height)) {
+          e.health -= b.power * player.attackPower;
+          bullets.splice(bi, 1);
+          if (e.health <= 0) {
+            enemies.splice(ei, 1);
+            upgradePoints++;
+          }
+        }
+      });
+    });
+
+    // Enemy bullets hitting player
+    enemyBullets.forEach((b, bi) => {
+      // Check shield first
+      if (circleRectCollide(b.x, b.y, 5, player.x, player.y, player.width, player.height)) {
+        if (player.shield > 0) {
+          player.shield -= b.power * 5;
+          if (player.shield < 0) player.shield = 0;
+        } else {
+          player.health -= b.power * 7;
+          if (player.health <= 0) {
+            player.health = 0;
+            gameOver = true;
+          }
+        }
+        enemyBullets.splice(bi, 1);
+      }
+    });
+
+    // Shield regen
+    if (player.shield < player.maxShield) {
+      player.shield += player.shieldRegen;
+      if (player.shield > player.maxShield) player.shield = player.maxShield;
+    }
+
+    // Check wave clear
+    if (enemies.length === 0) {
+      victory = wave >= 20;
+      if (victory) {
+        finalVictory = true;
+      } else {
+        // Enter upgrade phase instead of next wave immediately
+        showUpgradePanel();
+      }
+    }
+
+    updateHud();
+
+    // Update charge bar fill
+    chargeFill.style.width = (charge) + '%';
+  }
+
+  function drawGame() {
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+    // Draw base line
+    ctx.strokeStyle = '#0ff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, HEIGHT - 30);
+    ctx.lineTo(WIDTH, HEIGHT - 30);
+    ctx.stroke();
+
+    // Draw player
+    ctx.fillStyle = '#0ff';
+    ctx.fillRect(player.x, player.y, player.width, player.height);
+
+    // Draw bullets
+    bullets.forEach(b => b.draw());
+
+    // Draw enemies
+    enemies.forEach(e => e.draw());
+
+    // Draw enemy bullets
+    enemyBullets.forEach(b => {
+      ctx.fillStyle = '#f55';
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, 5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Draw shield overlay if shield active
+    if (player.shield > 0) {
+      ctx.strokeStyle = '#0ff9';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(player.x + player.width / 2, player.y + player.height / 2, player.width / 1.2, player.height / 1.2, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  function drawEndScreen() {
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+    ctx.fillStyle = '#0ff';
+    ctx.textAlign = 'center';
+    ctx.font = '48px Arial';
+
+    if (gameOver) {
+      ctx.fillText('GAME OVER', WIDTH / 2, HEIGHT / 2);
+      ctx.font = '20px Arial';
+      ctx.fillText('Press R to Restart', WIDTH / 2, HEIGHT / 2 + 40);
+    } else if (finalVictory) {
+      ctx.fillText('YOU WIN!', WIDTH / 2, HEIGHT / 2);
+      ctx.font = '20px Arial';
+      ctx.fillText('Press R to Restart', WIDTH / 2, HEIGHT / 2 + 40);
+    }
+  }
+
+  // Controls
+  window.addEventListener('keydown', e => {
+    if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
+      keys[e.code] = true;
+    }
+    if (e.code === 'Space' && !keys['Space']) {
+      if (!inUpgradePhase) {
+        charging = true;
+      }
+    }
+    if (e.code === 'KeyR' && (gameOver || finalVictory)) {
+      resetGame();
+      gameLoop();
+    }
+  });
+
+  window.addEventListener('keyup', e => {
+    if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
+      keys[e.code] = false;
+    }
+    if (e.code === 'Space') {
+      if (!inUpgradePhase && charging) {
+        charging = false;
+        if (charge < 5) {
+          // Fire a small bullet immediately if no charge
+          bullets.push(new Bullet(player.x + player.width / 2, player.y, -7, player.attackPower));
+          charge = 0;
+        }
+      }
+      keys['Space'] = false;
+    }
+  });
+
+  // Upgrade buttons
+  upgradeHealthBtn.addEventListener('click', () => {
+    if (upgradePoints >= 1) {
+      player.maxHealth += 20;
+      player.health += 20;
+      if (player.health > player.maxHealth) player.health = player.maxHealth;
+      upgradePoints--;
+      updateHud();
+    }
+  });
+
+  upgradeShieldBtn.addEventListener('click', () => {
+    if (upgradePoints >= 1) {
+      player.maxShield += 15;
+      player.shield += 15;
+      if (player.shield > player.maxShield) player.shield = player.maxShield;
+      upgradePoints--;
+      updateHud();
+    }
+  });
+
+  upgradeAttackBtn.addEventListener('click', () => {
+    if (upgradePoints >= 1) {
+      player.attackPower += 0.5;
+      upgradePoints--;
+      updateHud();
+    }
+  });
+
+  startNextWaveBtn.addEventListener('click', () => {
+    if (inUpgradePhase) {
+      wave++;
+      spawnWave();
+      hideUpgradePanel();
+      victory = false;
+      updateHud();
+      gameLoop();
+    }
+  });
+
+  // Start game for first time
+  resetGame();
+  gameLoop();
+})();
+</script>
+</body>
+</html>
